@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -187,7 +188,7 @@ public class BlockchainAuditService {
      * Get audit trail for a specific entity
      */
     @Transactional(readOnly = true)
-    public java.util.List<BlockchainAuditChain> getAuditTrail(String entityType, Long entityId) {
+    public List<BlockchainAuditChain> getAuditTrail(String entityType, Long entityId) {
         log.info("Fetching audit trail: entityType={}, entityId={}", entityType, entityId);
         return auditChainRepository.findByEntityTypeAndEntityId(entityType, entityId);
     }
@@ -196,7 +197,7 @@ public class BlockchainAuditService {
      * Get audit trail for a user
      */
     @Transactional(readOnly = true)
-    public java.util.List<BlockchainAuditChain> getUserAuditTrail(Long userId) {
+    public List<BlockchainAuditChain> getUserAuditTrail(Long userId) {
         log.info("Fetching user audit trail: userId={}", userId);
         return auditChainRepository.findByUserId(userId);
     }

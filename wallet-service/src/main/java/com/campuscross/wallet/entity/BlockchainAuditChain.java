@@ -38,14 +38,9 @@ public class BlockchainAuditChain {
     @Column(nullable = false)
     private Long entityId;
     
-    @Column
+    @Column(name = "user_id")
     private Long userId;
     
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", referencedColumnName = "id", nullable = false)
-    private User user;
-
-
     // Blockchain fields
     @Column(nullable = false, unique = true, length = 64)
     private String currentHash;
