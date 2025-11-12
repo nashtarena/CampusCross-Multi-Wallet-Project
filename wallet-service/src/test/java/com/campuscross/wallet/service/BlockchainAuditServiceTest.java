@@ -53,16 +53,14 @@ public class BlockchainAuditServiceTest {
         Map<String, Object> eventData = mkMap(
                 "walletId", 123L,
                 "action", "CREATED",
-                "currencies", List.of("USD", "EUR", "GBP")
-        );
+                "currencies", List.of("USD", "EUR", "GBP"));
 
         BlockchainAuditChain block = auditService.createAuditBlock(
                 BlockchainAuditService.EVENT_WALLET_CREATED,
                 "WALLET",
                 123L,
                 testUser.getId(),
-                eventData
-        );
+                eventData);
 
         assertNotNull(block);
         assertNotNull(block.getId());
@@ -75,8 +73,10 @@ public class BlockchainAuditServiceTest {
 
     @Test
     public void testChainLinking() {
-        BlockchainAuditChain block1 = auditService.createAuditBlock("TEST_EVENT", "TEST", 1L, testUser.getId(), mkMap("event", "first"));
-        BlockchainAuditChain block2 = auditService.createAuditBlock("TEST_EVENT", "TEST", 2L, testUser.getId(), mkMap("event", "second"));
+        BlockchainAuditChain block1 = auditService.createAuditBlock("TEST_EVENT", "TEST", 1L, testUser.getId(),
+                mkMap("event", "first"));
+        BlockchainAuditChain block2 = auditService.createAuditBlock("TEST_EVENT", "TEST", 2L, testUser.getId(),
+                mkMap("event", "second"));
 
         assertEquals(block1.getBlockNumber() + 1, block2.getBlockNumber());
         assertEquals(block1.getCurrentHash(), block2.getPreviousHash());
@@ -84,7 +84,8 @@ public class BlockchainAuditServiceTest {
 
     @Test
     public void testAuditWalletCreation() {
-        BlockchainAuditChain block = auditService.auditWalletCreation(999L, testUser.getId(), mkMap("initialCurrencies", List.of("USD","EUR"), "status","ACTIVE"));
+        BlockchainAuditChain block = auditService.auditWalletCreation(999L, testUser.getId(),
+                mkMap("initialCurrencies", List.of("USD", "EUR"), "status", "ACTIVE"));
 
         assertNotNull(block);
         assertEquals("WALLET_CREATED", block.getEventType());
@@ -94,7 +95,8 @@ public class BlockchainAuditServiceTest {
 
     @Test
     public void testAuditTransaction() {
-        BlockchainAuditChain block = auditService.auditTransaction(555L, testUser.getId(), "P2P", "100.00", "USD", "COMPLETED");
+        BlockchainAuditChain block = auditService.auditTransaction(555L, testUser.getId(), "P2P", "100.00", "USD",
+                "COMPLETED");
 
         assertNotNull(block);
         assertEquals("TRANSACTION_CREATED", block.getEventType());
@@ -104,7 +106,8 @@ public class BlockchainAuditServiceTest {
     @Test
     public void testGetAuditTrail() {
         for (int i = 0; i < 3; i++)
-            auditService.createAuditBlock("TEST_EVENT", "WALLET", 777L, testUser.getId(), mkMap("action", "update_" + i));
+            auditService.createAuditBlock("TEST_EVENT", "WALLET", 777L, testUser.getId(),
+                    mkMap("action", "update_" + i));
 
         List<BlockchainAuditChain> trail = auditService.getAuditTrail("WALLET", 777L);
         assertEquals(3, trail.size());
@@ -113,9 +116,10 @@ public class BlockchainAuditServiceTest {
     @Test
     public void testGetChainStatistics() {
         for (int i = 0; i < 5; i++)
-            auditService.createAuditBlock("TEST_EVENT", "TEST", (long)i, testUser.getId(), mkMap("test", "block_" + i));
+            auditService.createAuditBlock("TEST_EVENT", "TEST", (long) i, testUser.getId(),
+                    mkMap("test", "block_" + i));
 
-        Map<String,Object> stats = auditService.getChainStatistics();
+        Map<String, Object> stats = auditService.getChainStatistics();
         assertNotNull(stats);
         assertTrue((Long) stats.get("totalBlocks") >= 5);
         assertEquals("HEALTHY", stats.get("chainHealth"));
@@ -130,7 +134,8 @@ public class BlockchainAuditServiceTest {
 
     @Test
     public void testProofOfWork() {
-        BlockchainAuditChain block = auditService.createAuditBlockWithProofOfWork("TEST_POW", "TEST", 999L, testUser.getId(), mkMap("test", "proof_of_work"), 2);
+        BlockchainAuditChain block = auditService.createAuditBlockWithProofOfWork("TEST_POW", "TEST", 999L,
+                testUser.getId(), mkMap("test", "proof_of_work"), 2);
 
         assertNotNull(block);
         assertTrue(block.getCurrentHash().startsWith("00"));
@@ -140,7 +145,8 @@ public class BlockchainAuditServiceTest {
 
     @Test
     public void testBalanceUpdateAudit() {
-        BlockchainAuditChain block = auditService.auditBalanceUpdate(100L, testUser.getId(), "USD", "100.00", "150.00", "Deposit");
+        BlockchainAuditChain block = auditService.auditBalanceUpdate(100L, testUser.getId(), "USD", "100.00", "150.00",
+                "Deposit");
 
         assertNotNull(block);
         assertEquals("BALANCE_UPDATED", block.getEventType());
@@ -152,7 +158,8 @@ public class BlockchainAuditServiceTest {
 
     @Test
     public void testConversionAudit() {
-        BlockchainAuditChain block = auditService.auditConversion(200L, testUser.getId(), "USD", "EUR", "100.00", "92.00", "0.92");
+        BlockchainAuditChain block = auditService.auditConversion(200L, testUser.getId(), "USD", "EUR", "100.00",
+                "92.00", "0.92");
 
         assertNotNull(block);
         assertEquals("CONVERSION_EXECUTED", block.getEventType());
@@ -163,7 +170,8 @@ public class BlockchainAuditServiceTest {
 
     @Test
     public void testDisbursementAudit() {
-        BlockchainAuditChain block = auditService.auditDisbursement(300L, testUser.getId(), "COMPLETED", 50, "10000.00", "USD");
+        BlockchainAuditChain block = auditService.auditDisbursement(300L, testUser.getId(), "COMPLETED", 50, "10000.00",
+                "USD");
 
         assertNotNull(block);
         assertEquals("DISBURSEMENT_CREATED", block.getEventType());
@@ -174,7 +182,8 @@ public class BlockchainAuditServiceTest {
 
     @Test
     public void testRiskScoreAudit() {
-        BlockchainAuditChain block = auditService.auditRiskScore(400L, 500L, testUser.getId(), "HIGH", "75.50", "Large amount; High velocity");
+        BlockchainAuditChain block = auditService.auditRiskScore(400L, 500L, testUser.getId(), "HIGH", "75.50",
+                "Large amount; High velocity");
 
         assertNotNull(block);
         assertEquals("RISK_SCORE_CREATED", block.getEventType());
@@ -185,7 +194,8 @@ public class BlockchainAuditServiceTest {
     @Test
     public void testGetUserAuditTrail() {
         for (int i = 0; i < 3; i++)
-            auditService.createAuditBlock("USER_ACTION", "USER", testUser.getId(), testUser.getId(), mkMap("userAction", "action_" + i));
+            auditService.createAuditBlock("USER_ACTION", "USER", testUser.getId(), testUser.getId(),
+                    mkMap("userAction", "action_" + i));
 
         List<BlockchainAuditChain> trail = auditService.getUserAuditTrail(testUser.getId());
         assertTrue(trail.size() >= 3);

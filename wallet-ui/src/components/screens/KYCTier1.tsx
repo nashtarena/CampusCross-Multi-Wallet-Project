@@ -77,7 +77,7 @@ export function KYCTier1({ onBack, onNext }: KYCTier1Props) {
               <Input
                 id="studentId"
                 type="text"
-                placeholder="STU123456"
+                placeholder=""
                 className="h-12 rounded-xl border-gray-200"
                 value={formData.studentId}
                 onChange={(e) => setFormData({ ...formData, studentId: e.target.value })}
@@ -89,7 +89,7 @@ export function KYCTier1({ onBack, onNext }: KYCTier1Props) {
               <Input
                 id="university"
                 type="text"
-                placeholder="Harvard University"
+                placeholder=""
                 className="h-12 rounded-xl border-gray-200"
                 value={formData.university}
                 onChange={(e) => setFormData({ ...formData, university: e.target.value })}

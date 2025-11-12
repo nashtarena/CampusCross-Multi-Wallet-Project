@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { WalletCard } from '../wallet/WalletCard';
 import { Card } from '../ui/card';
 import { Button } from '../ui/button';
 import { 
@@ -10,236 +11,274 @@ import {
   Bell, 
   Settings,
   TrendingUp,
-  Zap,
-  ChevronRight,
-  Sparkles
+  Clock,
+  AlertCircle,
+  Send as SendIcon
 } from 'lucide-react';
 import { Avatar, AvatarFallback } from '../ui/avatar';
+import { Badge } from '../ui/badge';
+import { useAppContext } from '../../App';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
+import { toast } from 'sonner@2.0.3';
+import { Switch } from '../ui/switch';
+import { Label } from '../ui/label';
 
 interface HomeProps {
   onNavigate: (screen: string) => void;
 }
 
 const currencies = [
-  { currency: 'USD', symbol: '$', balance: 2450.75, color: '#2ECC71', bgColor: 'from-emerald-500/20 to-teal-500/20', borderColor: 'border-emerald-500/30' },
-  { currency: 'EUR', symbol: '€', balance: 1820.50, color: '#9B59B6', bgColor: 'from-purple-500/20 to-pink-500/20', borderColor: 'border-purple-500/30' },
-  { currency: 'GBP', symbol: '£', balance: 980.25, color: '#E67E22', bgColor: 'from-orange-500/20 to-amber-500/20', borderColor: 'border-orange-500/30' },
-  { currency: 'JPY', symbol: '¥', balance: 125000, color: '#E74C3C', bgColor: 'from-red-500/20 to-rose-500/20', borderColor: 'border-red-500/30' },
-  { currency: 'INR', symbol: '₹', balance: 45500, color: '#F4C542', bgColor: 'from-amber-500/20 to-yellow-500/20', borderColor: 'border-amber-500/30' }
-];
-
-const quickActions = [
-  { id: 'p2p', label: 'Send', icon: Send, gradient: 'from-cyan-500 to-blue-500', screen: 'p2p' },
-  { id: 'campus', label: 'Pay', icon: QrCode, gradient: 'from-teal-500 to-emerald-500', screen: 'campus' },
-  { id: 'conversion', label: 'Convert', icon: ArrowLeftRight, gradient: 'from-purple-500 to-pink-500', screen: 'conversion' },
-  { id: 'analytics', label: 'Stats', icon: TrendingUp, gradient: 'from-indigo-500 to-purple-500', screen: 'analytics' },
+  { currency: 'USD', symbol: '$', balance: 2450.75, color: '#2ECC71' },
+  { currency: 'EUR', symbol: '€', balance: 1820.50, color: '#9B59B6' },
+  { currency: 'GBP', symbol: '£', balance: 980.25, color: '#E67E22' },
+  { currency: 'JPY', symbol: '¥', balance: 125000, color: '#E74C3C' },
+  { currency: 'INR', symbol: '₹', balance: 45500, color: '#F4C542' }
 ];
 
 const recentTransactions = [
-  { id: 1, name: 'Sarah Johnson', type: 'received', amount: 50, currency: 'USD', time: '2h', emoji: '👤' },
-  { id: 2, name: 'Campus Cafe', type: 'sent', amount: -15.50, currency: 'USD', time: '5h', emoji: '☕' },
-  { id: 3, name: 'Bookstore', type: 'sent', amount: -89, currency: 'USD', time: '1d', emoji: '📚' },
+  { id: 1, name: 'Sarah Johnson', type: 'P2P Transfer', amount: -50, currency: 'USD', time: '2h ago' },
+  { id: 2, name: 'Campus Cafeteria', type: 'Campus Payment', amount: -15.50, currency: 'USD', time: '5h ago' },
+  { id: 3, name: 'Michael Chen', type: 'P2P Received', amount: 100, currency: 'EUR', time: '1d ago' }
+];
+
+const notifications = [
+  { id: 1, message: 'P2P transfer received: $100 from Sarah Johnson', time: '2h ago' },
+  { id: 2, message: 'Your EUR wallet balance is low', time: '5h ago' },
+  { id: 3, message: 'New rate alert triggered for JPY', time: '1d ago' }
 ];
 
 export function Home({ onNavigate }: HomeProps) {
   const [isBalanceHidden, setIsBalanceHidden] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const { userName, theme, toggleTheme } = useAppContext();
+  
   const totalBalanceUSD = 8250.40;
+  const displayName = userName || 'Guest';
+  const initials = displayName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+
+  const bgColor = theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50';
+  const cardBg = theme === 'dark' ? 'bg-gray-800' : 'bg-white';
+  const textColor = theme === 'dark' ? 'text-gray-100' : 'text-gray-900';
+  const textSecondary = theme === 'dark' ? 'text-gray-400' : 'text-gray-600';
 
   return (
-    <div className="min-h-screen bg-black">
-      {/* Unique Header with Diagonal Cut */}
-      <div className="relative pb-24">
-        <div className="absolute inset-0 bg-gradient-to-br from-zinc-900 via-zinc-800 to-black" style={{
-          clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 60px), 0 100%)'
-        }} />
-        
-        {/* Decorative Elements */}
-        <div className="absolute top-10 right-10 w-32 h-32 rounded-full bg-gradient-to-br from-indigo-500/20 to-purple-500/20 blur-2xl" />
-        
-        <div className="relative z-10 px-6 pt-12">
-          {/* Top Bar */}
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center gap-3">
-              <Avatar className="w-12 h-12 border-2 border-white/10">
-                <AvatarFallback className="bg-gradient-to-br from-indigo-500 to-purple-500 text-white">JD</AvatarFallback>
-              </Avatar>
-              <div>
-                <p className="text-xs text-gray-500">Welcome back</p>
-                <p className="text-white">John Doe</p>
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <button className="w-10 h-10 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 flex items-center justify-center hover:bg-white/10 transition-colors relative">
-                <Bell size={18} className="text-white" />
-                <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full" />
-              </button>
-              <button 
-                onClick={() => onNavigate('settings')}
-                className="w-10 h-10 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 flex items-center justify-center hover:bg-white/10 transition-colors"
-              >
-                <Settings size={18} className="text-white" />
-              </button>
+    <div className={`min-h-screen ${bgColor}`}>
+      {/* Header */}
+      <div className="bg-gradient-to-br from-indigo-600 to-purple-600 rounded-b-3xl p-6 pb-8">
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-3">
+            <Avatar className="w-12 h-12 border-2 border-white">
+              <AvatarFallback className="bg-white text-indigo-600">{initials}</AvatarFallback>
+            </Avatar>
+            <div>
+              <p className="text-white/80 text-sm">Welcome back,</p>
+              <p className="text-white">{displayName}</p>
             </div>
           </div>
-
-          {/* Balance Card with Asymmetric Design */}
-          <div className="relative">
-            <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-3xl blur-xl opacity-30" />
-            <div className="relative bg-gradient-to-br from-zinc-800/80 to-zinc-900/80 backdrop-blur-xl border border-white/10 rounded-3xl p-6">
-              <div className="flex items-start justify-between mb-4">
-                <div>
-                  <p className="text-xs text-gray-400 mb-1 flex items-center gap-2">
-                    Total Portfolio
-                    <Sparkles size={12} className="text-yellow-500" />
-                  </p>
-                  {isBalanceHidden ? (
-                    <p className="text-4xl text-white">••••••</p>
-                  ) : (
-                    <p className="text-4xl text-white tracking-tight">${totalBalanceUSD.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
-                  )}
-                </div>
-                <button 
-                  onClick={() => setIsBalanceHidden(!isBalanceHidden)}
-                  className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-colors"
-                >
-                  {isBalanceHidden ? <EyeOff size={18} className="text-gray-400" /> : <Eye size={18} className="text-gray-400" />}
-                </button>
-              </div>
-              
-              <div className="flex items-center gap-2 mb-4">
-                <div className="flex items-center gap-1 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/30">
-                  <TrendingUp size={12} className="text-emerald-400" />
-                  <span className="text-xs text-emerald-400">+5.2%</span>
-                </div>
-                <p className="text-xs text-gray-500">vs last month</p>
-              </div>
-
-              {/* Quick Stats */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-white/5 rounded-xl p-3 border border-white/5">
-                  <p className="text-xs text-gray-500 mb-1">Received</p>
-                  <p className="text-white">$1,240</p>
-                </div>
-                <div className="bg-white/5 rounded-xl p-3 border border-white/5">
-                  <p className="text-xs text-gray-500 mb-1">Spent</p>
-                  <p className="text-white">$890</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Quick Actions - Unique Circular Layout */}
-      <div className="px-6 -mt-16 mb-8">
-        <div className="grid grid-cols-4 gap-3">
-          {quickActions.map((action) => {
-            const Icon = action.icon;
-            return (
-              <button
-                key={action.id}
-                onClick={() => onNavigate(action.screen)}
-                className="flex flex-col items-center gap-2 group"
-              >
-                <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${action.gradient} flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform relative`}>
-                  <Icon className="text-white" size={24} />
-                  <div className="absolute inset-0 rounded-2xl bg-white/0 group-hover:bg-white/10 transition-colors" />
-                </div>
-                <span className="text-xs text-gray-400 group-hover:text-white transition-colors">{action.label}</span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Currency Cards - Horizontal Scroll with Unique Card Design */}
-      <div className="px-6 mb-8">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-white text-lg">Your Wallets</h2>
-          <button className="text-xs text-gray-400 hover:text-white transition-colors flex items-center gap-1">
-            View All
-            <ChevronRight size={14} />
-          </button>
-        </div>
-        
-        <div className="space-y-3">
-          {currencies.slice(0, 3).map((wallet, index) => (
-            <div
-              key={wallet.currency}
-              className="relative group cursor-pointer"
-              style={{ 
-                transform: `rotate(${index === 1 ? '0deg' : index === 0 ? '-0.5deg' : '0.5deg'})`,
-                transition: 'transform 0.3s'
-              }}
+          <div className="flex gap-2">
+            <button 
+              onClick={() => setShowNotifications(true)}
+              className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center relative"
             >
-              <div className={`absolute inset-0 bg-gradient-to-r ${wallet.bgColor} rounded-2xl blur-lg opacity-0 group-hover:opacity-100 transition-opacity`} />
-              <div className={`relative bg-zinc-900/80 backdrop-blur-xl border ${wallet.borderColor} rounded-2xl p-5`}>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-white/10 to-white/5 border border-white/10 flex items-center justify-center">
-                      <span className="text-xl">{wallet.symbol}</span>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500">{wallet.currency}</p>
-                      <p className="text-white text-xl">
-                        {isBalanceHidden ? '••••••' : `${wallet.symbol}${wallet.balance.toLocaleString()}`}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <button className="w-9 h-9 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-colors">
-                      <Send size={14} className="text-gray-400" />
-                    </button>
-                    <button className="w-9 h-9 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-colors">
-                      <Zap size={14} className="text-gray-400" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
+              <Bell className="text-white" size={20} />
+              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+            </button>
+            <button 
+              onClick={() => setShowSettings(true)}
+              className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center"
+            >
+              <Settings className="text-white" size={20} />
+            </button>
+          </div>
+        </div>
+
+        {/* Total Balance */}
+        <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-white/80 text-sm">Total Balance (USD)</p>
+            <button 
+              onClick={() => setIsBalanceHidden(!isBalanceHidden)}
+              className="text-white/80"
+            >
+              {isBalanceHidden ? <EyeOff size={20} /> : <Eye size={20} />}
+            </button>
+          </div>
+          {isBalanceHidden ? (
+            <p className="text-white text-3xl">••••••</p>
+          ) : (
+            <p className="text-white text-3xl">${totalBalanceUSD.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
+          )}
+          <div className="flex items-center gap-2 mt-2">
+            <TrendingUp size={14} className="text-green-300" />
+            <p className="text-green-300 text-xs">+5.2% this month</p>
+          </div>
         </div>
       </div>
 
-      {/* Recent Activity - Timeline Style */}
-      <div className="px-6 pb-8">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-white text-lg">Recent Activity</h2>
-          <button 
-            onClick={() => onNavigate('analytics')}
-            className="text-xs text-gray-400 hover:text-white transition-colors flex items-center gap-1"
-          >
-            See All
-            <ChevronRight size={14} />
-          </button>
-        </div>
+      {/* Quick Actions */}
+      <div className="px-6 -mt-6 mb-6">
+        <Card className={`p-4 shadow-lg border-0 ${cardBg}`}>
+          <p className={`text-sm mb-3 ${textColor}`}>Quick Actions</p>
+          <div className="grid grid-cols-3 gap-3">
+            <button 
+              onClick={() => onNavigate('p2p')}
+              className="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700"
+            >
+              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-cyan-400 to-cyan-600 flex items-center justify-center">
+                <Send className="text-white" size={20} />
+              </div>
+              <span className={`text-xs ${textColor}`}>Send</span>
+            </button>
+            <button 
+              onClick={() => onNavigate('campus')}
+              className="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700"
+            >
+              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center">
+                <QrCode className="text-white" size={20} />
+              </div>
+              <span className={`text-xs ${textColor}`}>Pay</span>
+            </button>
+            <button 
+              onClick={() => onNavigate('conversion')}
+              className="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700"
+            >
+              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-slate-400 to-slate-600 flex items-center justify-center">
+                <ArrowLeftRight className="text-white" size={20} />
+              </div>
+              <span className={`text-xs ${textColor}`}>Convert</span>
+            </button>
+            <button 
+              onClick={() => onNavigate('analytics')}
+              className="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700"
+            >
+              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center">
+                <TrendingUp className="text-white" size={20} />
+              </div>
+              <span className={`text-xs ${textColor}`}>Analytics</span>
+            </button>
+            <button 
+              onClick={() => onNavigate('remittance')}
+              className="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700"
+            >
+              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center">
+                <SendIcon className="text-white" size={20} />
+              </div>
+              <span className={`text-xs ${textColor}`}>Remittance</span>
+            </button>
+            <button 
+              onClick={() => onNavigate('alerts')}
+              className="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700"
+            >
+              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center">
+                <AlertCircle className="text-white" size={20} />
+              </div>
+              <span className={`text-xs ${textColor}`}>Alerts</span>
+            </button>
+          </div>
+        </Card>
+      </div>
 
+      {/* Wallet Cards */}
+      <div className="px-6 mb-6">
+        <div className="flex items-center justify-between mb-3">
+          <p className={textColor}>My Wallets</p>
+          <Button variant="ghost" size="sm" className="text-sm h-auto p-0">
+            View All
+          </Button>
+        </div>
         <div className="space-y-3">
-          {recentTransactions.map((tx, index) => (
-            <div key={tx.id} className="relative">
-              {index < recentTransactions.length - 1 && (
-                <div className="absolute left-6 top-12 bottom-0 w-px bg-gradient-to-b from-zinc-800 to-transparent" />
-              )}
-              <div className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl p-4 hover:border-zinc-700 transition-colors">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-xl bg-zinc-800 flex items-center justify-center flex-shrink-0 text-xl">
-                    {tx.emoji}
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-white text-sm">{tx.name}</p>
-                    <p className="text-xs text-gray-500">{tx.time} ago</p>
-                  </div>
-                  <div className="text-right">
-                    <p className={`${tx.amount > 0 ? 'text-emerald-400' : 'text-white'}`}>
-                      {tx.amount > 0 ? '+' : ''}{tx.amount} {tx.currency}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
+          {currencies.slice(0, 3).map((wallet) => (
+            <WalletCard 
+              key={wallet.currency}
+              {...wallet}
+              isBalanceHidden={isBalanceHidden}
+            />
           ))}
         </div>
       </div>
+
+      {/* Recent Transactions */}
+      <div className="px-6 pb-6">
+        <div className="flex items-center justify-between mb-3">
+          <p className={textColor}>Recent Activity</p>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="text-sm h-auto p-0"
+            onClick={() => onNavigate('analytics')}
+          >
+            View All
+          </Button>
+        </div>
+        <Card className={`divide-y border-0 shadow-lg ${cardBg}`}>
+          {recentTransactions.map((tx) => (
+            <div key={tx.id} className="p-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                  tx.type.includes('Received') ? 'bg-green-100 dark:bg-green-900' : 'bg-gray-100 dark:bg-gray-700'
+                }`}>
+                  <Clock className={tx.type.includes('Received') ? 'text-green-600' : 'text-gray-600'} size={18} />
+                </div>
+                <div>
+                  <p className={`text-sm ${textColor}`}>{tx.name}</p>
+                  <p className={`text-xs ${textSecondary}`}>{tx.type}</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className={`text-sm ${tx.amount > 0 ? 'text-green-600' : textColor}`}>
+                  {tx.amount > 0 ? '+' : ''}{tx.amount} {tx.currency}
+                </p>
+                <p className={`text-xs ${textSecondary}`}>{tx.time}</p>
+              </div>
+            </div>
+          ))}
+        </Card>
+      </div>
+
+      {/* Notifications Dialog */}
+      <Dialog open={showNotifications} onOpenChange={setShowNotifications}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Notifications</DialogTitle>
+            <DialogDescription>
+              Stay updated with your recent activities
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-4">
+            {notifications.map((notif) => (
+              <div key={notif.id} className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <p className="text-sm text-gray-900 dark:text-gray-100">{notif.message}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{notif.time}</p>
+              </div>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Settings Dialog */}
+      <Dialog open={showSettings} onOpenChange={setShowSettings}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Settings</DialogTitle>
+            <DialogDescription>
+              Customize your app experience
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label>Dark Mode</Label>
+                <p className="text-xs text-gray-500">Toggle between light and dark theme</p>
+              </div>
+              <Switch 
+                checked={theme === 'dark'} 
+                onCheckedChange={toggleTheme}
+              />
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

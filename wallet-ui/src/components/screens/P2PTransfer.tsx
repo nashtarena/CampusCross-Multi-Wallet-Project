@@ -5,24 +5,26 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
-import { ArrowLeft, Send, Search, Zap, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Send, Search, Clock, CheckCircle2 } from 'lucide-react';
 import { Avatar, AvatarFallback } from '../ui/avatar';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
+import { toast } from 'sonner';
+import { useAppContext } from '../../App';
 
 interface P2PTransferProps {
   onBack: () => void;
 }
 
 const recentContacts = [
-  { id: 1, name: 'Sarah Johnson', studentId: 'STU123456', avatar: 'SJ', color: 'from-pink-500 to-rose-500' },
-  { id: 2, name: 'Michael Chen', studentId: 'STU789012', avatar: 'MC', color: 'from-blue-500 to-cyan-500' },
-  { id: 3, name: 'Emma Davis', studentId: 'STU345678', avatar: 'ED', color: 'from-purple-500 to-indigo-500' },
-  { id: 4, name: 'Alex Kumar', studentId: 'STU901234', avatar: 'AK', color: 'from-emerald-500 to-teal-500' }
+  { id: 1, name: 'Sarah Johnson', studentId: 'STU123456', avatar: 'SJ' },
+  { id: 2, name: 'Michael Chen', studentId: 'STU789012', avatar: 'MC' },
+  { id: 3, name: 'Emma Davis', studentId: 'STU345678', avatar: 'ED' }
 ];
 
 const transactionHistory = [
-  { id: 1, name: 'Sarah Johnson', amount: 50, currency: 'USD', date: 'Today', status: 'completed', type: 'sent' },
-  { id: 2, name: 'Michael Chen', amount: 75, currency: 'EUR', date: 'Yesterday', status: 'completed', type: 'received' },
-  { id: 3, name: 'Emma Davis', amount: 100, currency: 'GBP', date: '2 days ago', status: 'pending', type: 'sent' }
+  { id: 1, name: 'Sarah Johnson', amount: 50, currency: 'USD', date: '2024-11-09', status: 'completed' },
+  { id: 2, name: 'Michael Chen', amount: -75, currency: 'EUR', date: '2024-11-08', status: 'completed' },
+  { id: 3, name: 'Emma Davis', amount: 100, currency: 'GBP', date: '2024-11-07', status: 'pending' }
 ];
 
 export function P2PTransfer({ onBack }: P2PTransferProps) {
@@ -30,214 +32,217 @@ export function P2PTransfer({ onBack }: P2PTransferProps) {
   const [amount, setAmount] = useState('');
   const [recipient, setRecipient] = useState('');
   const [activeTab, setActiveTab] = useState('send');
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  const { theme } = useAppContext();
+
+  const handleSendMoney = () => {
+    if (!recipient) {
+      toast.error('Please enter a recipient');
+      return;
+    }
+    if (!amount || parseFloat(amount) <= 0) {
+      toast.error('Please enter a valid amount');
+      return;
+    }
+    setShowConfirmation(true);
+  };
+
+  const confirmTransfer = () => {
+    toast.success(`Successfully sent ${amount} ${selectedCurrency} to ${recipient}`);
+    setShowConfirmation(false);
+    setAmount('');
+    setRecipient('');
+  };
+
+  const bgColor = theme === 'dark' ? 'from-cyan-900 to-blue-900' : 'from-cyan-50 to-blue-50';
+  const cardBg = theme === 'dark' ? 'bg-gray-800' : 'bg-white';
+  const textColor = theme === 'dark' ? 'text-gray-100' : 'text-gray-900';
+  const inputBg = theme === 'dark' ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-200';
 
   return (
-    <div className="min-h-screen bg-black">
-      {/* Header with Gradient Accent */}
-      <div className="relative pb-8">
-        <div className="absolute inset-0 bg-gradient-to-br from-cyan-900/30 via-blue-900/20 to-black" style={{
-          clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 50px), 0 100%)'
-        }} />
-        
-        <div className="absolute top-20 right-0 w-40 h-40 rounded-full bg-gradient-to-br from-cyan-500/20 to-blue-500/20 blur-3xl" />
-        
-        <div className="relative z-10 p-6 pt-12">
-          <div className="flex items-center gap-3 mb-6">
-            <button 
-              onClick={onBack}
-              className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-colors"
-            >
-              <ArrowLeft size={20} className="text-white" />
-            </button>
-            <div>
-              <h1 className="text-2xl text-white">P2P Transfer</h1>
-              <p className="text-sm text-gray-400">Send money instantly</p>
-            </div>
-          </div>
-
-          {/* Custom Tab Pills */}
-          <div className="flex gap-2 bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl p-1.5">
-            <button
-              onClick={() => setActiveTab('send')}
-              className={`flex-1 py-3 rounded-xl transition-all ${
-                activeTab === 'send'
-                  ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-lg shadow-cyan-500/30'
-                  : 'text-gray-400 hover:text-white'
-              }`}
-            >
-              Send
-            </button>
-            <button
-              onClick={() => setActiveTab('history')}
-              className={`flex-1 py-3 rounded-xl transition-all ${
-                activeTab === 'history'
-                  ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-lg shadow-cyan-500/30'
-                  : 'text-gray-400 hover:text-white'
-              }`}
-            >
-              History
-            </button>
+    <div className={`min-h-screen bg-gradient-to-br ${bgColor}`}>
+      {/* Header */}
+      <div className="bg-[#00BCD4] p-6 pb-8 rounded-b-3xl">
+        <div className="flex items-center gap-3 mb-4">
+          <button onClick={onBack} className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center">
+            <ArrowLeft size={20} className="text-white" />
+          </button>
+          <div>
+            <h1 className="text-xl text-white">P2P Transfer</h1>
+            <p className="text-sm text-white/80">Send money to students</p>
           </div>
         </div>
       </div>
 
       <div className="px-6 -mt-4">
-        {activeTab === 'send' ? (
-          <div className="space-y-6">
-            {/* Send Form with Unique Design */}
-            <div className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-3xl p-6">
-              <div className="space-y-5">
-                {/* Recipient Search */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="w-full bg-white shadow-lg rounded-xl p-1 mb-6">
+            <TabsTrigger value="send" className="flex-1 rounded-lg">Send</TabsTrigger>
+            <TabsTrigger value="history" className="flex-1 rounded-lg">History</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="send" className="mt-0 space-y-6">
+            {/* Send Form */}
+            <Card className="p-6 bg-white shadow-lg border-0">
+              <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label className="text-gray-400 text-sm">Send To</Label>
+                  <Label className="text-gray-700">Recipient</Label>
                   <div className="relative">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={20} />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
                     <Input
-                      placeholder="Student ID or Mobile"
-                      className="pl-12 h-14 rounded-2xl bg-black/50 border-zinc-800 text-white placeholder:text-gray-600 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
+                      placeholder="Student ID or Mobile Number"
+                      className="pl-10 h-12 rounded-xl border-gray-200"
                       value={recipient}
                       onChange={(e) => setRecipient(e.target.value)}
                     />
                   </div>
                 </div>
 
-                {/* Amount Input with Currency Selector */}
-                <div className="space-y-2">
-                  <Label className="text-gray-400 text-sm">Amount</Label>
-                  <div className="flex gap-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label className="text-gray-700">Currency</Label>
                     <Select value={selectedCurrency} onValueChange={setSelectedCurrency}>
-                      <SelectTrigger className="w-28 h-14 rounded-2xl bg-black/50 border-zinc-800 text-white">
+                      <SelectTrigger className="h-12 rounded-xl border-gray-200">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="USD">USD $</SelectItem>
-                        <SelectItem value="EUR">EUR €</SelectItem>
-                        <SelectItem value="GBP">GBP £</SelectItem>
-                        <SelectItem value="JPY">JPY ¥</SelectItem>
-                        <SelectItem value="INR">INR ₹</SelectItem>
+                        <SelectItem value="USD">USD</SelectItem>
+                        <SelectItem value="EUR">EUR</SelectItem>
+                        <SelectItem value="GBP">GBP</SelectItem>
+                        <SelectItem value="JPY">JPY</SelectItem>
+                        <SelectItem value="INR">INR</SelectItem>
                       </SelectContent>
                     </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-gray-700">Amount</Label>
                     <Input
                       type="number"
                       placeholder="0.00"
-                      className="flex-1 h-14 rounded-2xl bg-black/50 border-zinc-800 text-white text-2xl placeholder:text-gray-600 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
+                      className="h-12 rounded-xl border-gray-200"
                       value={amount}
                       onChange={(e) => setAmount(e.target.value)}
                     />
                   </div>
                 </div>
 
-                {/* Note */}
                 <div className="space-y-2">
-                  <Label className="text-gray-400 text-sm">Note (Optional)</Label>
+                  <Label className="text-gray-700">Note (Optional)</Label>
                   <Input
-                    placeholder="What's this for?"
-                    className="h-14 rounded-2xl bg-black/50 border-zinc-800 text-white placeholder:text-gray-600 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
+                    placeholder="Add a message"
+                    className="h-12 rounded-xl border-gray-200"
                   />
                 </div>
 
-                {/* Fee Info */}
-                <div className="flex items-center justify-between p-4 bg-cyan-500/10 border border-cyan-500/20 rounded-2xl">
-                  <div className="flex items-center gap-2">
-                    <Zap size={16} className="text-cyan-400" />
-                    <span className="text-sm text-gray-300">Transfer Fee</span>
+                <div className="bg-cyan-50 rounded-xl p-4">
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="text-gray-600">Transfer Fee</span>
+                    <span className="text-gray-900">Free</span>
                   </div>
-                  <span className="text-cyan-400">Free</span>
+                  <div className="flex justify-between">
+                    <span className="text-gray-900">Total</span>
+                    <span className="text-gray-900">{amount || '0.00'} {selectedCurrency}</span>
+                  </div>
                 </div>
 
-                {/* Send Button */}
                 <Button 
-                  className="w-full h-14 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white shadow-xl shadow-cyan-500/30"
+                  className="w-full h-12 rounded-xl"
+                  style={{ background: '#00BCD4' }}
+                  onClick={handleSendMoney}
                 >
                   <Send size={20} className="mr-2" />
                   Send Money
                 </Button>
               </div>
-            </div>
+            </Card>
 
-            {/* Quick Contacts - Horizontal Scroll */}
+            {/* Recent Contacts */}
             <div>
-              <h3 className="text-white mb-4 flex items-center gap-2">
-                <Zap size={18} className="text-cyan-400" />
-                Quick Send
-              </h3>
-              <div className="flex gap-3 overflow-x-auto pb-2 -mx-6 px-6 scrollbar-hide">
+              <h3 className="text-gray-900 mb-3">Recent Contacts</h3>
+              <div className="space-y-3">
                 {recentContacts.map((contact) => (
-                  <button
+                  <Card 
                     key={contact.id}
+                    className="p-4 border-0 shadow-md hover:shadow-lg transition-shadow cursor-pointer"
                     onClick={() => setRecipient(contact.studentId)}
-                    className="flex flex-col items-center gap-2 group flex-shrink-0"
                   >
-                    <div className="relative">
-                      <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${contact.color} flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform`}>
-                        <span className="text-white text-lg">{contact.avatar}</span>
+                    <div className="flex items-center gap-3">
+                      <Avatar className="w-12 h-12 bg-gradient-to-br from-cyan-400 to-cyan-600">
+                        <AvatarFallback className="bg-transparent text-white">
+                          {contact.avatar}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1">
+                        <p className="text-gray-900">{contact.name}</p>
+                        <p className="text-xs text-gray-500">{contact.studentId}</p>
                       </div>
-                      <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-lg bg-black border-2 border-emerald-500 flex items-center justify-center">
-                        <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                      </div>
+                      <Send className="text-gray-400" size={18} />
                     </div>
-                    <p className="text-xs text-gray-400 text-center max-w-[80px] truncate group-hover:text-white transition-colors">
-                      {contact.name.split(' ')[0]}
-                    </p>
-                  </button>
+                  </Card>
                 ))}
               </div>
             </div>
-          </div>
-        ) : (
-          <div className="space-y-3 pb-6">
-            {transactionHistory.map((tx) => (
-              <div 
-                key={tx.id}
-                className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl p-4 hover:border-zinc-700 transition-colors"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                      tx.status === 'completed' 
-                        ? tx.type === 'received' 
-                          ? 'bg-emerald-500/20' 
-                          : 'bg-blue-500/20'
-                        : 'bg-amber-500/20'
-                    }`}>
-                      {tx.status === 'completed' ? (
-                        <CheckCircle2 
-                          className={tx.type === 'received' ? 'text-emerald-400' : 'text-blue-400'} 
-                          size={20} 
-                        />
-                      ) : (
-                        <Zap className="text-amber-400" size={20} />
-                      )}
+          </TabsContent>
+
+          <TabsContent value="history" className="mt-0">
+            <div className="space-y-3">
+              {transactionHistory.map((tx) => (
+                <Card key={tx.id} className="p-4 border-0 shadow-md">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                        tx.status === 'completed' ? 'bg-green-100' : 'bg-amber-100'
+                      }`}>
+                        {tx.status === 'completed' ? (
+                          <CheckCircle2 className="text-green-600" size={20} />
+                        ) : (
+                          <Clock className="text-amber-600" size={20} />
+                        )}
+                      </div>
+                      <div>
+                        <p className="text-gray-900">{tx.name}</p>
+                        <p className="text-xs text-gray-500">{tx.date}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-white">{tx.name}</p>
-                      <p className="text-xs text-gray-500">{tx.date}</p>
+                    <div className="text-right">
+                      <p className={`${tx.amount > 0 ? 'text-green-600' : 'text-gray-900'}`}>
+                        {tx.amount > 0 ? '+' : ''}{tx.amount} {tx.currency}
+                      </p>
+                      <p className="text-xs text-gray-500 capitalize">{tx.status}</p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className={`${
-                      tx.type === 'received' ? 'text-emerald-400' : 'text-white'
-                    }`}>
-                      {tx.type === 'received' ? '+' : '-'}{tx.amount} {tx.currency}
-                    </p>
-                    <p className="text-xs text-gray-500 capitalize">{tx.status}</p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+                </Card>
+              ))}
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
 
-      <style>{`
-        .scrollbar-hide::-webkit-scrollbar {
-          display: none;
-        }
-        .scrollbar-hide {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
-      `}</style>
+      {/* Confirmation Dialog */}
+      <Dialog open={showConfirmation} onOpenChange={setShowConfirmation}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Confirm Transfer</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to send {amount} {selectedCurrency} to {recipient}?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-4">
+            <Button
+              variant="outline"
+              onClick={() => setShowConfirmation(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={confirmTransfer}
+            >
+              Confirm
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, createContext, useContext } from 'react';
 import { Welcome } from './components/screens/Welcome';
 import { SignUp } from './components/screens/SignUp';
 import { KYCTier1 } from './components/screens/KYCTier1';
@@ -12,6 +12,7 @@ import { Remittance } from './components/screens/Remittance';
 import { AdminPanel } from './components/screens/AdminPanel';
 import { RateAlerts } from './components/screens/RateAlerts';
 import { Analytics } from './components/screens/Analytics';
+import { Toaster } from './components/ui/sonner';
 
 type Screen = 
   | 'welcome' 
@@ -29,8 +30,34 @@ type Screen =
   | 'analytics'
   | 'settings';
 
+interface AppContextType {
+  userName: string;
+  setUserName: (name: string) => void;
+  userPassword: string;
+  setUserPassword: (password: string) => void;
+  theme: 'light' | 'dark';
+  toggleTheme: () => void;
+}
+
+const AppContext = createContext<AppContextType | undefined>(undefined);
+
+export const useAppContext = () => {
+  const context = useContext(AppContext);
+  if (!context) {
+    throw new Error('useAppContext must be used within AppProvider');
+  }
+  return context;
+};
+
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('welcome');
+  const [userName, setUserName] = useState('');
+  const [userPassword, setUserPassword] = useState('');
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+
+  const toggleTheme = () => {
+    setTheme(prev => prev === 'light' ? 'dark' : 'light');
+  };
 
   const renderScreen = () => {
     switch (currentScreen) {
@@ -83,30 +110,33 @@ export default function App() {
   };
 
   return (
-    <div className="max-w-md mx-auto bg-white min-h-screen shadow-2xl">
-      {renderScreen()}
-      
-      {/* Development Navigation Helper */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="fixed bottom-4 right-4 bg-black/80 backdrop-blur-sm text-white p-4 rounded-xl shadow-lg max-w-xs z-50">
-          <p className="text-xs mb-2">Dev Navigation</p>
-          <div className="grid grid-cols-2 gap-2 text-xs">
-            <button onClick={() => setCurrentScreen('welcome')} className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded">Welcome</button>
-            <button onClick={() => setCurrentScreen('signup')} className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded">SignUp</button>
-            <button onClick={() => setCurrentScreen('kyc1')} className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded">KYC 1</button>
-            <button onClick={() => setCurrentScreen('kyc2')} className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded">KYC 2</button>
-            <button onClick={() => setCurrentScreen('biometric')} className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded">Biometric</button>
-            <button onClick={() => setCurrentScreen('home')} className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded">Home</button>
-            <button onClick={() => setCurrentScreen('conversion')} className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded">Convert</button>
-            <button onClick={() => setCurrentScreen('p2p')} className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded">P2P</button>
-            <button onClick={() => setCurrentScreen('campus')} className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded">Campus</button>
-            <button onClick={() => setCurrentScreen('remittance')} className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded">Remittance</button>
-            <button onClick={() => setCurrentScreen('admin')} className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded">Admin</button>
-            <button onClick={() => setCurrentScreen('alerts')} className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded">Alerts</button>
-            <button onClick={() => setCurrentScreen('analytics')} className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded">Analytics</button>
+    <AppContext.Provider value={{ userName, setUserName, userPassword, setUserPassword, theme, toggleTheme }}>
+      <div className="max-w-md mx-auto bg-white min-h-screen shadow-2xl">
+        {renderScreen()}
+        <Toaster position="top-center" />
+        
+        {/* Development Navigation Helper */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="fixed bottom-4 right-4 bg-black/80 backdrop-blur-sm text-white p-4 rounded-xl shadow-lg max-w-xs z-50">
+            <p className="text-xs mb-2">Dev Navigation</p>
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <button onClick={() => setCurrentScreen('welcome')} className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded">Welcome</button>
+              <button onClick={() => setCurrentScreen('signup')} className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded">SignUp</button>
+              <button onClick={() => setCurrentScreen('kyc1')} className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded">KYC 1</button>
+              <button onClick={() => setCurrentScreen('kyc2')} className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded">KYC 2</button>
+              <button onClick={() => setCurrentScreen('biometric')} className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded">Biometric</button>
+              <button onClick={() => setCurrentScreen('home')} className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded">Home</button>
+              <button onClick={() => setCurrentScreen('conversion')} className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded">Convert</button>
+              <button onClick={() => setCurrentScreen('p2p')} className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded">P2P</button>
+              <button onClick={() => setCurrentScreen('campus')} className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded">Campus</button>
+              <button onClick={() => setCurrentScreen('remittance')} className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded">Remittance</button>
+              <button onClick={() => setCurrentScreen('admin')} className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded">Admin</button>
+              <button onClick={() => setCurrentScreen('alerts')} className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded">Alerts</button>
+              <button onClick={() => setCurrentScreen('analytics')} className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded">Analytics</button>
+            </div>
           </div>
-        </div>
-      )}
-    </div>
+        )}
+      </div>
+    </AppContext.Provider>
   );
 }

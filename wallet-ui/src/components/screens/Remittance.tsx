@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { ArrowLeft, Building2, Clock, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Progress } from '../ui/progress';
+import { useAppContext } from '../../App';
 
 interface RemittanceProps {
   onBack: () => void;
@@ -22,12 +23,15 @@ export function Remittance({ onBack }: RemittanceProps) {
   const [activeTab, setActiveTab] = useState('send');
   const [selectedCurrency, setSelectedCurrency] = useState('USD');
   const [amount, setAmount] = useState('');
+  const { theme } = useAppContext();
 
   const fee = parseFloat(amount || '0') * 0.01; // 1% fee
   const totalAmount = parseFloat(amount || '0') + fee;
 
+  const bgColor = theme === 'dark' ? 'from-blue-900 to-indigo-900' : 'from-blue-50 to-indigo-50';
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
+    <div className={`min-h-screen bg-gradient-to-br ${bgColor}`}>
       {/* Header */}
       <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-6 pb-8 rounded-b-3xl">
         <div className="flex items-center gap-3 mb-4">

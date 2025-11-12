@@ -4,6 +4,11 @@ import { Card } from '../ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { ArrowLeft, TrendingUp, ArrowUpRight, ArrowDownLeft, Download, Filter } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
+import { Label } from '../ui/label';
+import { Checkbox } from '../ui/checkbox';
+import { toast } from 'sonner@2.0.3';
+import { useAppContext } from '../../App';
 
 interface AnalyticsProps {
   onBack: () => void;
@@ -36,9 +41,33 @@ const currencyData = [
 
 export function Analytics({ onBack }: AnalyticsProps) {
   const [timeRange, setTimeRange] = useState('6m');
+  const [showFilterDialog, setShowFilterDialog] = useState(false);
+  const [filters, setFilters] = useState({
+    food: true,
+    books: true,
+    transport: true,
+    shopping: true,
+    others: true
+  });
+  const { theme } = useAppContext();
+
+  const handleDownload = () => {
+    toast.success('Downloading analytics report...');
+    // Simulate download
+    setTimeout(() => {
+      toast.success('Report downloaded successfully!');
+    }, 1500);
+  };
+
+  const handleApplyFilters = () => {
+    toast.success('Filters applied successfully');
+    setShowFilterDialog(false);
+  };
+
+  const bgColor = theme === 'dark' ? 'from-blue-900 to-indigo-900' : 'from-blue-50 to-indigo-50';
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
+    <div className={`min-h-screen bg-gradient-to-br ${bgColor}`}>
       {/* Header */}
       <div className="bg-[#4682B4] p-6 pb-8 rounded-b-3xl">
         <div className="flex items-center gap-3 mb-6">
@@ -88,11 +117,11 @@ export function Analytics({ onBack }: AnalyticsProps) {
                 <SelectItem value="1y">Last Year</SelectItem>
               </SelectContent>
             </Select>
-            <Button variant="outline" size="sm" className="rounded-lg">
+            <Button variant="outline" size="sm" className="rounded-lg" onClick={() => setShowFilterDialog(true)}>
               <Filter size={16} className="mr-2" />
               Filter
             </Button>
-            <Button variant="outline" size="sm" className="rounded-lg">
+            <Button variant="outline" size="sm" className="rounded-lg" onClick={handleDownload}>
               <Download size={16} />
             </Button>
           </div>
@@ -203,6 +232,65 @@ export function Analytics({ onBack }: AnalyticsProps) {
           ))}
         </div>
       </div>
+
+      {/* Filter Dialog */}
+      <Dialog open={showFilterDialog} onOpenChange={setShowFilterDialog}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Filter Categories</DialogTitle>
+            <DialogDescription>
+              Select the categories you want to include in the analytics.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="food"
+                checked={filters.food}
+                onCheckedChange={(checked) => setFilters({ ...filters, food: checked })}
+              />
+              <Label htmlFor="food">Food</Label>
+            </div>
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="books"
+                checked={filters.books}
+                onCheckedChange={(checked) => setFilters({ ...filters, books: checked })}
+              />
+              <Label htmlFor="books">Books</Label>
+            </div>
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="transport"
+                checked={filters.transport}
+                onCheckedChange={(checked) => setFilters({ ...filters, transport: checked })}
+              />
+              <Label htmlFor="transport">Transport</Label>
+            </div>
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="shopping"
+                checked={filters.shopping}
+                onCheckedChange={(checked) => setFilters({ ...filters, shopping: checked })}
+              />
+              <Label htmlFor="shopping">Shopping</Label>
+            </div>
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="others"
+                checked={filters.others}
+                onCheckedChange={(checked) => setFilters({ ...filters, others: checked })}
+              />
+              <Label htmlFor="others">Others</Label>
+            </div>
+          </div>
+          <div className="mt-4">
+            <Button variant="outline" size="sm" className="rounded-lg" onClick={handleApplyFilters}>
+              Apply Filters
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

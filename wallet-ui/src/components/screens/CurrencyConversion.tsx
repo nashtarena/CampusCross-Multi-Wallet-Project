@@ -5,6 +5,7 @@ import { Input } from '../ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Switch } from '../ui/switch';
 import { ArrowLeft, ArrowDownUp, TrendingUp, TrendingDown, Bell } from 'lucide-react';
+import { useAppContext } from '../../App';
 
 interface CurrencyConversionProps {
   onBack: () => void;
@@ -30,14 +31,17 @@ export function CurrencyConversion({ onBack }: CurrencyConversionProps) {
   const [toCurrency, setToCurrency] = useState('EUR');
   const [amount, setAmount] = useState('100');
   const [rateAlertEnabled, setRateAlertEnabled] = useState(false);
+  const { theme } = useAppContext();
 
   const fromCurrencyData = currencies.find(c => c.code === fromCurrency);
   const toCurrencyData = currencies.find(c => c.code === toCurrency);
   const rate = 0.92; // Mock rate
   const convertedAmount = parseFloat(amount || '0') * rate;
 
+  const bgColor = theme === 'dark' ? 'from-slate-800 to-slate-900' : 'from-slate-50 to-slate-100';
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+    <div className={`min-h-screen bg-gradient-to-br ${bgColor}`}>
       {/* Header */}
       <div className="bg-[#607D8B] p-6 pb-20 rounded-b-3xl">
         <div className="flex items-center gap-3 mb-6">
