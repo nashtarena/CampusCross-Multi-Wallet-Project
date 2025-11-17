@@ -1,8 +1,7 @@
-package com.campuscross.fx_service.service; // Or .util/.api if you prefer
+package com.campuscross.fx_service.service;
 
-import java.math.BigDecimal;
-import java.util.Optional;
-
+import com.campuscross.fx_service.client.AirwallexClient;
+import com.campuscross.fx_service.config.AirwallexConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -10,65 +9,115 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
-@Service // Registers this as a Spring bean for dependency injection
+import java.math.BigDecimal;
+import java.util.Optional;
+
+@Service
 public class FxRateFetcher {
 
     private static final Logger log = LoggerFactory.getLogger(FxRateFetcher.class);
 
-    // Dependencies
     private final RestTemplate restTemplate;
+    private final AirwallexClient airwallexClient;
+    private final AirwallexConfig airwallexConfig;
 
-    // Configuration
+    // Keep ExchangeRate API as fallback
     @Value("${fx.api.key}")
-    private String apiKey;
+    private String exchangeRateApiKey;
 
-    // Constructor Injection (Recommended)
-    public FxRateFetcher(RestTemplate restTemplate) {
+    public FxRateFetcher(
+            RestTemplate restTemplate,
+            AirwallexClient airwallexClient,
+            AirwallexConfig airwallexConfig) {
         this.restTemplate = restTemplate;
+        this.airwallexClient = airwallexClient;
+        this.airwallexConfig = airwallexConfig;
     }
 
     /**
-     * Calls the external FX API to retrieve the current real exchange rate.
-     * This method is the core worker and is NEVER cached internally.
-     * * @param from The base currency (e.g., USD)
-     * 
-     * @param to The target currency (e.g., EUR)
-     * @return Optional containing the exchange rate, or empty if the API call fails
-     *         or is missing data.
+     * Fetch FX rate with intelligent provider selection
+     * * Priority:
+     * 1. Airwallex (if configured and enabled)
+     * 2. ExchangeRate API (fallback)
      */
-    // Inside FxRateFetcher.java
-
     public Optional<BigDecimal> fetchRealRateFromApi(String from, String to) {
 
-        String apiUrl = String.format(
-                "https://v6.exchangerate-api.com/v6/%s/latest/%s", apiKey, from);
+        // 🚨 CRITICAL CHECK LOG: Ensure API Key is loaded
+        if (exchangeRateApiKey == null || exchangeRateApiKey.isEmpty()) {
+            log.error("🔑 fx.api.key is MISSING or EMPTY in application.properties. Fallback will fail.");
+        }
 
-        log.warn("API Call Executed: Fetching new rate for {} to {}. This indicates a CACHE MISS or Expiration.", from,
-                to);
+        // Try Airwallex first if configured
+        if (airwallexConfig.isEnabled() && airwallexClient.isConfigured()) {
+            try {
+                log.info("🚀 Attempting Airwallex (Primary): {} → {}", from, to);
+                BigDecimal rate = airwallexClient.getCurrentRate(from, to);
+                log.info("✅ Airwallex Success. Rate: {}", rate);
+                return Optional.of(rate);
+            } catch (Exception e) {
+                log.warn("❌ Airwallex API failed for {} → {}. Falling back. Error: {}",
+                        from, to, e.getMessage());
+            }
+        } else {
+            log.info("⚠️ Airwallex is disabled or not configured. Skipping primary attempt.");
+        }
+
+        // Fallback to ExchangeRate API
+        return fetchFromExchangeRateApi(from, to);
+    }
+
+    /**
+     * Fetch rate from ExchangeRate API (original implementation)
+     * Kept as fallback for reliability
+     */
+    private Optional<BigDecimal> fetchFromExchangeRateApi(String from, String to) {
+
+        // 🚨 CRITICAL CHECK LOG: Prevent API call if key is known to be missing
+        if (exchangeRateApiKey == null || exchangeRateApiKey.isEmpty()) {
+            log.error("🛑 ExchangeRate API skip: Cannot fetch because API key is unset.");
+            return Optional.empty();
+        }
+
+        String apiUrl = String.format(
+                "https://v6.exchangerate-api.com/v6/%s/latest/%s",
+                exchangeRateApiKey, from);
+
+        log.info("🛰️ Attempting ExchangeRate API (Fallback): {} → {}. URL: {}", from, to, apiUrl);
 
         try {
-            // FxApiResponse now correctly returns Map<String, Double>
             FxApiResponse response = restTemplate.getForObject(apiUrl, FxApiResponse.class);
 
-            if (response != null && response.getConversion_rates() != null) {
+            // 🚨 DIAGNOSTIC LOG: Check if the top-level response or map is null
+            if (response == null) {
+                log.error("❌ Fallback API returned a NULL response object.");
+                return Optional.empty();
+            }
+            if (response.getConversion_rates() == null) {
+                log.error(
+                        "❌ Fallback API response is missing 'conversion_rates' map. Check JSON structure or API key validity.");
+                // Assuming FxApiResponse has a getResult() method from the original code
+                // suggestion:
+                // log.error("Response status/result was: {}", response.getResult());
+                return Optional.empty();
+            }
 
-                // 1. Get the value as a Double (raw API type)
-                Double rawRate = response.getConversion_rates().get(to);
+            Double rawRate = response.getConversion_rates().get(to);
 
-                // 2. Check if the rate was found
-                if (rawRate != null) {
-                    // 3. CRITICAL FINAL FIX: Convert the raw Double to a BigDecimal
-                    // to match the method's return signature (Optional<BigDecimal>)
-                    BigDecimal preciseRate = BigDecimal.valueOf(rawRate);
-                    return Optional.of(preciseRate);
-                }
+            if (rawRate != null) {
+                BigDecimal preciseRate = BigDecimal.valueOf(rawRate);
+                log.info("✅ Fallback API Success. Rate: {}", preciseRate);
+                return Optional.of(preciseRate);
+            } else {
+                log.error("❌ Fallback API response did not contain rate for target currency '{}'. Available keys: {}",
+                        to, response.getConversion_rates().keySet());
             }
 
         } catch (RestClientException e) {
-            log.error("Failed to fetch FX rate for {} to {}: {}", from, to, e.getMessage());
+            // Catches connection issues, 4xx/5xx HTTP errors, and JSON parsing errors
+            log.error("🔥 CRITICAL API FAILURE: RestTemplate call to ExchangeRate API failed for {} to {}. Error: {}",
+                    from, to, e.getMessage());
         }
 
-        // Return empty if API call failed or rate was not found in the response map
         return Optional.empty();
     }
 }

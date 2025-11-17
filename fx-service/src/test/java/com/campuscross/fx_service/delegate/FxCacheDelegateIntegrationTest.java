@@ -1,6 +1,11 @@
 package com.campuscross.fx_service.delegate;
 
-import com.campuscross.fx_service.service.FxRateFetcher;
+import com.campuscross.fx_service.client.SumsubClient;
+import com.campuscross.fx_service.controller.KycController;
+import com.campuscross.fx_service.controller.RateAlertController;
+import com.campuscross.fx_service.repository.RateAlertRepository;
+import com.campuscross.fx_service.repository.UserKycRepository;
+import com.campuscross.fx_service.service.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -13,14 +18,6 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.test.context.TestPropertySource;
 
-import com.campuscross.fx_service.repository.UserKycRepository;
-import com.campuscross.fx_service.repository.RateAlertRepository;
-import com.campuscross.fx_service.service.KycService;
-import com.campuscross.fx_service.service.KycAsyncProcessor;
-import com.campuscross.fx_service.service.RateAlertService;
-import com.campuscross.fx_service.controller.KycController;
-import com.campuscross.fx_service.controller.RateAlertController;
-
 import java.math.BigDecimal;
 import java.util.Optional;
 
@@ -30,7 +27,11 @@ import static org.mockito.Mockito.*;
 @TestPropertySource(properties = {
         "spring.task.scheduling.enabled=false",
         "spring.task.execution.enabled=false",
-        "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration,org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration"
+        "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration,org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration",
+        "airwallex.enabled=false",
+        "airwallex.api-url=http://localhost",
+        "airwallex.client-id=test",
+        "airwallex.api-key=test"
 })
 public class FxCacheDelegateIntegrationTest {
 
@@ -43,14 +44,14 @@ public class FxCacheDelegateIntegrationTest {
     @Autowired
     private StringRedisTemplate redisTemplate;
 
-    // Mock all JPA repositories
+    // Mock ALL JPA repositories
     @MockBean
     private UserKycRepository userKycRepository;
 
     @MockBean
     private RateAlertRepository rateAlertRepository;
 
-    // Mock all services that depend on repositories
+    // Mock ALL services that depend on JPA
     @MockBean
     private KycService kycService;
 
@@ -60,12 +61,22 @@ public class FxCacheDelegateIntegrationTest {
     @MockBean
     private RateAlertService rateAlertService;
 
-    // Mock all controllers that depend on those services
+    @MockBean
+    private SumsubWebhookHandler sumsubWebhookHandler;
+
+    @MockBean
+    private OpenSanctionsService openSanctionsService;
+
+    // Mock ALL controllers
     @MockBean
     private KycController kycController;
 
     @MockBean
     private RateAlertController rateAlertController;
+
+    // Mock ALL external clients
+    @MockBean
+    private SumsubClient sumsubClient;
 
     @BeforeEach
     void setUp() {

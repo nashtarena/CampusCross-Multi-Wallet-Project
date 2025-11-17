@@ -959,9 +959,7 @@
     max-width: calc(100% - 2rem);
   }
 
-  .max-w-md {
-    max-width: var(--container-md);
-  }
+
 
   .max-w-sm {
     max-width: var(--container-sm);

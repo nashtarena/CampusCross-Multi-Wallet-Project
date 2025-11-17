@@ -65,7 +65,7 @@ public class FxService {
      * them to Kafka.
      * Runs every 2 hours (7200000 ms).
      */
-    @Scheduled(fixedRate = 7200000) // Every 2 hours
+    @Scheduled(fixedRate = 120000) // Every 2 hours
     public void scheduleAndPublishRates() {
         // Defined all four MVP currencies to ensure comprehensive coverage
         String[] currencies = { "USD", "EUR", "GBP", "JPY" };

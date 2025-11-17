@@ -9,6 +9,7 @@ import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
+import com.campuscross.fx_service.config.AirwallexConfig;
 import com.campuscross.fx_service.config.SumsubConfig;
 
 import jakarta.annotation.PostConstruct;
@@ -16,7 +17,7 @@ import jakarta.annotation.PostConstruct;
 @SpringBootApplication
 @EnableCaching
 @EnableScheduling
-@EnableConfigurationProperties(SumsubConfig.class)
+@EnableConfigurationProperties({ SumsubConfig.class, AirwallexConfig.class })
 public class FxServiceApplication {
 
 	public static void main(String[] args) {

@@ -19,7 +19,7 @@ public class CacheConfig {
     @Bean
     public RedisCacheConfiguration cacheConfiguration() {
         return RedisCacheConfiguration.defaultCacheConfig()
-                .entryTtl(Duration.ofHours(2)) // Your desired 2-hour TTL
+                .entryTtl(Duration.ofSeconds(120)) // Your desired 2-hour TTL
                 // .disableCachingNullValues()
                 .serializeValuesWith(SerializationPair.fromSerializer(new GenericJackson2JsonRedisSerializer()));
     }
