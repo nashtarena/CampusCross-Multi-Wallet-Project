@@ -8,13 +8,13 @@ import { Switch } from '../ui/switch';
 import { ArrowLeft, Bell, Plus, Trash2, TrendingUp, TrendingDown } from 'lucide-react';
 import { Badge } from '../ui/badge';
 
-// Backend alert structure
+// Backend alert structure - matches Java RateAlert entity
 interface BackendAlert {
   id: number;
   userId: number;
   currencyPair: string; // e.g., "USD/EUR"
   thresholdValue: number;
-  condition: 'above' | 'below';
+  direction: 'ABOVE' | 'BELOW';
   status: 'ACTIVE' | 'INACTIVE';
   createdAt?: string;
 }
@@ -24,7 +24,7 @@ interface FrontendAlert {
   id: number;
   from: string;
   to: string;
-  condition: 'above' | 'below';
+  direction: 'ABOVE' | 'BELOW';
   rate: number;
   currentRate: number;
   active: boolean;
@@ -32,16 +32,15 @@ interface FrontendAlert {
 
 interface RateAlertsProps {
   onBack: () => void;
-  userId: number; // Add userId as a required prop
+  userId?: number; // Make it optional with a default
 }
 
 // API Service Functions
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api/v1';
 
-
 const alertService = {
   // Create new alert
-  createAlert: async (alert: Omit<BackendAlert, 'id'>): Promise<BackendAlert> => {
+  createAlert: async (alert: Omit<BackendAlert, 'id' | 'createdAt'>): Promise<BackendAlert> => {
     const response = await fetch(`${API_BASE_URL}/alerts`, {
       method: 'POST',
       headers: {
@@ -51,7 +50,8 @@ const alertService = {
     });
     
     if (!response.ok) {
-      throw new Error('Failed to create alert');
+      const errorText = await response.text();
+      throw new Error(`Failed to create alert: ${errorText}`);
     }
     
     return response.json();
@@ -62,7 +62,8 @@ const alertService = {
     const response = await fetch(`${API_BASE_URL}/alerts/user/${userId}`);
     
     if (!response.ok) {
-      throw new Error('Failed to fetch alerts');
+      const errorText = await response.text();
+      throw new Error(`Failed to fetch alerts: ${errorText}`);
     }
     
     return response.json();
@@ -75,17 +76,29 @@ const alertService = {
     });
     
     if (!response.ok) {
-      throw new Error('Failed to delete alert');
+      const errorText = await response.text();
+      throw new Error(`Failed to delete alert: ${errorText}`);
     }
   },
 };
 
-// Helper function to get current rate from external API or cache
-// This should ideally come from your real-time rate service
-const getCurrentRate = async (currencyPair: string): Promise<number> => {
-  // TODO: Implement actual rate fetching from your FX rate service
-  // For now, return a placeholder
-  return 1.0;
+// Helper function to get current rate from backend FX service
+const getCurrentRate = async (from: string, to: string): Promise<number> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/fx/quote/${from}/${to}`);
+    
+    if (!response.ok) {
+      console.error(`Failed to fetch rate for ${from}/${to}`);
+      return 0;
+    }
+    
+    const data = await response.json();
+    // Backend returns { from: "USD", to: "EUR", rate: 0.85 }
+    return data.rate || 0;
+  } catch (error) {
+    console.error(`Error fetching rate for ${from}/${to}:`, error);
+    return 0;
+  }
 };
 
 // Transform backend alert to frontend format
@@ -100,7 +113,7 @@ const transformBackendToFrontend = (
     id: backendAlert.id,
     from,
     to,
-    condition: backendAlert.condition,
+    direction: backendAlert.direction,
     rate: backendAlert.thresholdValue,
     currentRate,
     active: backendAlert.status === 'ACTIVE',
@@ -112,23 +125,24 @@ const transformFrontendToBackend = (
   userId: number,
   from: string,
   to: string,
-  condition: 'above' | 'below',
+  direction: 'ABOVE' | 'BELOW',
   targetRate: string,
   active: boolean = true
-): Omit<BackendAlert, 'id'> => {
+): Omit<BackendAlert, 'id' | 'createdAt'> => {
   return {
     userId,
     currencyPair: `${from}/${to}`,
     thresholdValue: parseFloat(targetRate),
-    condition,
+    direction,
     status: active ? 'ACTIVE' : 'INACTIVE',
   };
 };
 
-export function RateAlerts({ onBack, userId }: RateAlertsProps) {
+export function RateAlerts({ onBack, userId = 1 }: RateAlertsProps) {
+  // userId defaults to 1 for development (before auth is implemented)
   const [fromCurrency, setFromCurrency] = useState('USD');
   const [toCurrency, setToCurrency] = useState('EUR');
-  const [condition, setCondition] = useState<'above' | 'below'>('above');
+  const [direction, setDirection] = useState<'ABOVE' | 'BELOW'>('ABOVE');
   const [targetRate, setTargetRate] = useState('');
   
   const [alerts, setAlerts] = useState<FrontendAlert[]>([]);
@@ -148,8 +162,9 @@ export function RateAlerts({ onBack, userId }: RateAlertsProps) {
       const rateMap = new Map<string, number>();
       
       for (const pair of uniquePairs) {
+        const [from, to] = pair.split('/');
         try {
-          const rate = await getCurrentRate(pair);
+          const rate = await getCurrentRate(from, to);
           rateMap.set(pair, rate);
         } catch (err) {
           console.error(`Failed to fetch rate for ${pair}`, err);
@@ -157,6 +172,14 @@ export function RateAlerts({ onBack, userId }: RateAlertsProps) {
       }
       
       setCurrentRates(rateMap);
+      
+      // Update alerts with new rates
+      setAlerts(prevAlerts => 
+        prevAlerts.map(alert => ({
+          ...alert,
+          currentRate: rateMap.get(`${alert.from}/${alert.to}`) || alert.currentRate
+        }))
+      );
     };
 
     if (alerts.length > 0) {
@@ -164,7 +187,7 @@ export function RateAlerts({ onBack, userId }: RateAlertsProps) {
       const interval = setInterval(updateRates, 30000); // Update every 30 seconds
       return () => clearInterval(interval);
     }
-  }, [alerts]);
+  }, [alerts.length]);
 
   const loadAlerts = async () => {
     setLoading(true);
@@ -178,8 +201,9 @@ export function RateAlerts({ onBack, userId }: RateAlertsProps) {
       const rateMap = new Map<string, number>();
       
       for (const pair of uniquePairs) {
+        const [from, to] = pair.split('/');
         try {
-          const rate = await getCurrentRate(pair);
+          const rate = await getCurrentRate(from, to);
           rateMap.set(pair, rate);
         } catch (err) {
           console.error(`Failed to fetch rate for ${pair}`, err);
@@ -205,6 +229,11 @@ export function RateAlerts({ onBack, userId }: RateAlertsProps) {
       return;
     }
 
+    if (fromCurrency === toCurrency) {
+      setError('Please select different currencies');
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
@@ -213,7 +242,7 @@ export function RateAlerts({ onBack, userId }: RateAlertsProps) {
         userId,
         fromCurrency,
         toCurrency,
-        condition,
+        direction,
         targetRate
       );
 
@@ -248,10 +277,7 @@ export function RateAlerts({ onBack, userId }: RateAlertsProps) {
   };
 
   const handleToggleAlert = async (alert: FrontendAlert) => {
-    // Note: Your backend doesn't have a PATCH/PUT endpoint for updating status
-    // This implementation deletes and recreates the alert with new status
-    // Consider adding a PATCH endpoint to your backend for better UX
-    
+    // Since backend doesn't have a PATCH endpoint, we delete and recreate
     setLoading(true);
     setError(null);
 
@@ -264,7 +290,7 @@ export function RateAlerts({ onBack, userId }: RateAlertsProps) {
         userId,
         alert.from,
         alert.to,
-        alert.condition,
+        alert.direction,
         alert.rate.toString(),
         !alert.active
       );
@@ -363,14 +389,14 @@ export function RateAlerts({ onBack, userId }: RateAlertsProps) {
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label className="text-gray-700">Condition</Label>
-                <Select value={condition} onValueChange={(val) => setCondition(val as 'above' | 'below')}>
+                <Label className="text-gray-700">Direction</Label>
+                <Select value={direction} onValueChange={(val) => setDirection(val as 'ABOVE' | 'BELOW')}>
                   <SelectTrigger className="h-12 rounded-xl border-gray-200">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="above">Goes Above</SelectItem>
-                    <SelectItem value="below">Goes Below</SelectItem>
+                    <SelectItem value="ABOVE">Goes Above</SelectItem>
+                    <SelectItem value="BELOW">Goes Below</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -427,7 +453,7 @@ export function RateAlerts({ onBack, userId }: RateAlertsProps) {
                       </Badge>
                     </div>
                     <p className="text-sm text-gray-600">
-                      Alert when rate goes {alert.condition} {alert.rate.toFixed(4)}
+                      Alert when rate goes {alert.direction.toLowerCase()} {alert.rate.toFixed(4)}
                     </p>
                     <div className="flex items-center gap-2 mt-2">
                       <span className="text-xs text-gray-500">Current rate:</span>

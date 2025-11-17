@@ -99,7 +99,7 @@ export default function App() {
       case 'admin':
         return <AdminPanel onBack={() => setCurrentScreen('home')} />;
       case 'alerts':
-        return <RateAlerts onBack={() => setCurrentScreen('home')} />;
+        return <RateAlerts onBack={() => setCurrentScreen('home')} userId={54321} />;
       case 'analytics':
         return <Analytics onBack={() => setCurrentScreen('home')} />;
       case 'settings':
