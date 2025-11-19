@@ -1,5 +1,6 @@
 package com.campuscross.wallet.controller;
 
+import com.campuscross.wallet.dto.RegisterRequest;
 import com.campuscross.wallet.entity.User;
 import com.campuscross.wallet.service.AuthenticationService;
 import com.campuscross.wallet.util.JwtUtil;
@@ -106,16 +107,6 @@ public class AuthController {
     }
     
     // Request/Response DTOs
-    public record RegisterRequest(
-            String email,
-            String password,
-            String firstName,
-            String lastName,
-            String phoneNumber,
-            String studentId,
-            String campusName
-    ) {}
-    
     public record LoginRequest(
             String studentId,
             String password
