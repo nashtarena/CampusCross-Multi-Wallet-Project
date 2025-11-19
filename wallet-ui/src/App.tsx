@@ -1,18 +1,24 @@
 import React, { useState, createContext, useContext } from 'react';
 import { Welcome } from './components/screens/Welcome';
 import { SignUp } from './components/screens/SignUp';
+<<<<<<< Updated upstream
 import { KYCTier1 } from './components/screens/KYCTier1';
 import { KYCTier2 } from './components/screens/KYCTier2';
 import { KYCStatusPolling } from './components/screens/KYCStatusPolling'; // NEW - You need to create this
 import { BiometricLogin } from './components/screens/BiometricLogin';
+=======
+import { Login } from './components/screens/Login';
+>>>>>>> Stashed changes
 import { Home } from './components/screens/Home';
-import { CurrencyConversion } from './components/screens/CurrencyConversion';
 import { P2PTransfer } from './components/screens/P2PTransfer';
+import { CurrencyConversion } from './components/screens/CurrencyConversion';
 import { CampusPayments } from './components/screens/CampusPayments';
 import { Remittance } from './components/screens/Remittance';
+import { KYCTier1 } from './components/screens/KYCTier1';
+import { KYCTier2 } from './components/screens/KYCTier2';
 import { AdminPanel } from './components/screens/AdminPanel';
 import { RateAlerts } from './components/screens/RateAlerts';
-import { Analytics } from './components/screens/Analytics';
+import { CreateWallet } from './components/screens/CreateWallet';
 import { Toaster } from './components/ui/sonner';
 
 type Screen = 
@@ -20,8 +26,12 @@ type Screen =
   | 'signup' 
   | 'kyc1' 
   | 'kyc2' 
+<<<<<<< Updated upstream
   | 'kyc-polling' // NEW - Added polling screen
   | 'biometric' 
+=======
+  | 'login' 
+>>>>>>> Stashed changes
   | 'home' 
   | 'conversion' 
   | 'p2p' 
@@ -29,8 +39,8 @@ type Screen =
   | 'remittance' 
   | 'admin' 
   | 'alerts' 
-  | 'analytics'
-  | 'settings';
+  | 'settings'
+  | 'createWallet';
 
 interface AppContextType {
   userName: string;
@@ -41,6 +51,7 @@ interface AppContextType {
   setUserId: (id: number) => void;
   theme: 'light' | 'dark';
   toggleTheme: () => void;
+  logout: () => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -55,21 +66,62 @@ export const useAppContext = () => {
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('welcome');
+<<<<<<< Updated upstream
   const [userName, setUserName] = useState('');
   const [userPassword, setUserPassword] = useState('');
   const [userId, setUserId] = useState(9002); // Store userId in state
   const [accessToken, setAccessToken] = useState(''); // Store Sumsub access token
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
+=======
+  const [userName, setUserName] = useState(() => localStorage.getItem('userName') || '');
+  const [userPassword, setUserPassword] = useState(() => localStorage.getItem('userPassword') || '');
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => (localStorage.getItem('theme') as 'light' | 'dark') || 'light');
+>>>>>>> Stashed changes
 
   const toggleTheme = () => {
-    setTheme(prev => prev === 'light' ? 'dark' : 'light');
+    const newTheme = theme === 'light' ? 'dark' : 'light';
+    setTheme(newTheme);
+    localStorage.setItem('theme', newTheme);
   };
+
+  const logout = () => {
+    setUserName('');
+    setUserPassword('');
+    localStorage.removeItem('userName');
+    localStorage.removeItem('userPassword');
+    setCurrentScreen('welcome');
+  };
+
+  // Save auth state to localStorage
+  React.useEffect(() => {
+    if (userName) {
+      localStorage.setItem('userName', userName);
+    }
+  }, [userName]);
+
+  React.useEffect(() => {
+    if (userPassword) {
+      localStorage.setItem('userPassword', userPassword);
+    }
+  }, [userPassword]);
+
+  // Check for direct navigation on mount
+  React.useEffect(() => {
+    const hash = window.location.hash.slice(1);
+    if (hash === 'home') {
+      setCurrentScreen('home');
+    }
+  }, []);
 
   const renderScreen = () => {
     switch (currentScreen) {
       case 'welcome':
+<<<<<<< Updated upstream
         return <Welcome onNext={() => setCurrentScreen('signup')} />;
       
+=======
+        return <Welcome onNext={() => setCurrentScreen('signup')} onNavigateToHome={() => setCurrentScreen('home')} />;
+>>>>>>> Stashed changes
       case 'signup':
         return (
           <SignUp 
@@ -99,6 +151,7 @@ export default function App() {
       case 'kyc2':
         return (
           <KYCTier2 
+<<<<<<< Updated upstream
             accessToken={accessToken}
             onComplete={() => {
               console.log('Documents uploaded to Sumsub');
@@ -135,6 +188,14 @@ export default function App() {
       case 'biometric':
         return <BiometricLogin onNext={() => setCurrentScreen('home')} />;
       
+=======
+            onBack={() => setCurrentScreen('kyc1')}
+            onNext={() => setCurrentScreen('home')}
+          />
+        );
+      case 'login':
+        return <Login onNext={() => setCurrentScreen('home')} />;
+>>>>>>> Stashed changes
       case 'home':
         return <Home onNavigate={(screen) => setCurrentScreen(screen as Screen)} />;
       
@@ -154,11 +215,17 @@ export default function App() {
         return <AdminPanel onBack={() => setCurrentScreen('home')} />;
       
       case 'alerts':
+<<<<<<< Updated upstream
         return <RateAlerts onBack={() => setCurrentScreen('home')} userId={userId} />;
       
       case 'analytics':
         return <Analytics onBack={() => setCurrentScreen('home')} />;
       
+=======
+        return <RateAlerts onBack={() => setCurrentScreen('home')} userId={54321} />;
+      case 'createWallet':
+        return <CreateWallet onBack={() => setCurrentScreen('home')} onWalletCreated={() => setCurrentScreen('home')} />;
+>>>>>>> Stashed changes
       case 'settings':
         return <Home onNavigate={(screen) => setCurrentScreen(screen as Screen)} />;
       
@@ -168,6 +235,7 @@ export default function App() {
   };
 
   return (
+<<<<<<< Updated upstream
     <AppContext.Provider value={{ 
       userName, 
       setUserName, 
@@ -178,6 +246,9 @@ export default function App() {
       theme, 
       toggleTheme 
     }}>
+=======
+    <AppContext.Provider value={{ userName, setUserName, userPassword, setUserPassword, theme, toggleTheme, logout }}>
+>>>>>>> Stashed changes
       <div className="max-w-md mx-auto bg-white min-h-screen shadow-2xl">
         {renderScreen()}
         <Toaster position="top-center" />
@@ -187,6 +258,7 @@ export default function App() {
           <div className="fixed bottom-4 right-4 bg-black/80 backdrop-blur-sm text-white p-4 rounded-xl shadow-lg max-w-xs z-50">
             <p className="text-xs mb-2 font-semibold">Dev Navigation</p>
             <div className="grid grid-cols-2 gap-2 text-xs">
+<<<<<<< Updated upstream
               <button onClick={() => setCurrentScreen('welcome')} className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded transition">Welcome</button>
               <button onClick={() => setCurrentScreen('signup')} className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded transition">SignUp</button>
               <button onClick={() => setCurrentScreen('kyc1')} className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded transition">KYC 1</button>
@@ -205,6 +277,19 @@ export default function App() {
             <div className="mt-2 pt-2 border-t border-white/20">
               <p className="text-xs opacity-60">Current: {currentScreen}</p>
               <p className="text-xs opacity-60">User ID: {userId}</p>
+=======
+              <button onClick={() => setCurrentScreen('welcome')} className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded">Welcome</button>
+              <button onClick={() => setCurrentScreen('signup')} className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded">SignUp</button>
+              <button onClick={() => setCurrentScreen('kyc1')} className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded">KYC 1</button>
+              <button onClick={() => setCurrentScreen('kyc2')} className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded">KYC 2</button>
+              <button onClick={() => setCurrentScreen('home')} className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded">Home</button>
+              <button onClick={() => setCurrentScreen('conversion')} className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded">Convert</button>
+              <button onClick={() => setCurrentScreen('p2p')} className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded">P2P</button>
+              <button onClick={() => setCurrentScreen('campus')} className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded">Campus</button>
+              <button onClick={() => setCurrentScreen('remittance')} className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded">Remittance</button>
+              <button onClick={() => setCurrentScreen('admin')} className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded">Admin</button>
+              <button onClick={() => setCurrentScreen('alerts')} className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded">Alerts</button>
+>>>>>>> Stashed changes
             </div>
           </div>
         )}

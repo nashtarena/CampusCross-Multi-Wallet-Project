@@ -1,15 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '../ui/button';
 import { Card } from '../ui/card';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
-import { ArrowLeft, Send, Search, Clock, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Send, Search, Clock, CheckCircle2, Wallet } from 'lucide-react';
 import { Avatar, AvatarFallback } from '../ui/avatar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
 import { toast } from 'sonner';
 import { useAppContext } from '../../App';
+import { walletApi, transactionApi } from '../../services/walletApi';
+import { Wallet as WalletType, Transaction } from '../../services/walletApi';
 
 interface P2PTransferProps {
   onBack: () => void;
@@ -28,14 +30,81 @@ const transactionHistory = [
 ];
 
 export function P2PTransfer({ onBack }: P2PTransferProps) {
+  const [selectedWallet, setSelectedWallet] = useState<WalletType | null>(null);
   const [selectedCurrency, setSelectedCurrency] = useState('USD');
   const [amount, setAmount] = useState('');
   const [recipient, setRecipient] = useState('');
+  const [note, setNote] = useState('');
   const [activeTab, setActiveTab] = useState('send');
   const [showConfirmation, setShowConfirmation] = useState(false);
+  const [wallets, setWallets] = useState<WalletType[]>([]);
+  const [isLoadingWallets, setIsLoadingWallets] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
+  const [isLoadingTransactions, setIsLoadingTransactions] = useState(false);
   const { theme } = useAppContext();
 
+  useEffect(() => {
+    const fetchWallets = async () => {
+      try {
+        setIsLoadingWallets(true);
+        const userStr = localStorage.getItem('user');
+        if (!userStr) {
+          toast.error('User not found');
+          return;
+        }
+
+        const user = JSON.parse(userStr);
+        const userWallets = await walletApi.getUserWallets(user.id);
+        
+        // Filter out frozen and closed wallets
+        const activeWallets = userWallets.filter(w => !w.isFrozen && !w.isClosed);
+        setWallets(activeWallets);
+        
+        // Auto-select the first wallet if available
+        if (activeWallets.length > 0) {
+          setSelectedWallet(activeWallets[0]);
+          setSelectedCurrency(activeWallets[0].currency);
+        }
+      } catch (error) {
+        console.error('Failed to fetch wallets:', error);
+        toast.error('Failed to load wallets');
+      } finally {
+        setIsLoadingWallets(false);
+      }
+    };
+
+    fetchWallets();
+  }, []);
+
+  useEffect(() => {
+    const fetchTransactions = async () => {
+      try {
+        setIsLoadingTransactions(true);
+        const userStr = localStorage.getItem('user');
+        if (!userStr) return;
+
+        const user = JSON.parse(userStr);
+        const transactions = await transactionApi.getUserTransactions(user.id);
+        
+        // Filter only P2P transfer transactions
+        const p2pTransactions = transactions.filter(tx => tx.type === 'P2P_TRANSFER');
+        setRecentTransactions(p2pTransactions.slice(0, 10)); // Show last 10 transactions
+      } catch (error) {
+        console.error('Failed to fetch transactions:', error);
+      } finally {
+        setIsLoadingTransactions(false);
+      }
+    };
+
+    fetchTransactions();
+  }, []);
+
   const handleSendMoney = () => {
+    if (!selectedWallet) {
+      toast.error('Please select a wallet');
+      return;
+    }
     if (!recipient) {
       toast.error('Please enter a recipient');
       return;
@@ -44,14 +113,83 @@ export function P2PTransfer({ onBack }: P2PTransferProps) {
       toast.error('Please enter a valid amount');
       return;
     }
+    if (parseFloat(amount) > selectedWallet.balance) {
+      toast.error('Insufficient balance');
+      return;
+    }
     setShowConfirmation(true);
   };
 
-  const confirmTransfer = () => {
-    toast.success(`Successfully sent ${amount} ${selectedCurrency} to ${recipient}`);
-    setShowConfirmation(false);
-    setAmount('');
-    setRecipient('');
+  const confirmTransfer = async () => {
+    if (!selectedWallet) return;
+    
+    try {
+      setIsProcessing(true);
+      
+      const transferData = {
+        fromWalletId: selectedWallet.id,
+        toWalletAddress: recipient, // In real implementation, this should be the recipient's wallet address
+        amount: parseFloat(amount),
+        currency: selectedCurrency,
+        description: note || `P2P transfer to ${recipient}`
+      };
+      
+      const transaction = await transactionApi.p2pTransfer(transferData);
+      
+      toast.success(`Successfully sent ${amount} ${selectedCurrency} to ${recipient}`);
+      setShowConfirmation(false);
+      setAmount('');
+      setRecipient('');
+      setNote('');
+      
+      // Refresh wallet balance
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        const userWallets = await walletApi.getUserWallets(user.id);
+        const activeWallets = userWallets.filter(w => !w.isFrozen && !w.isClosed);
+        setWallets(activeWallets);
+        
+        // Update selected wallet
+        const updatedWallet = activeWallets.find(w => w.id === selectedWallet.id);
+        if (updatedWallet) {
+          setSelectedWallet(updatedWallet);
+        }
+      }
+      
+      // Refresh transactions
+      const transactions = await transactionApi.getUserTransactions(JSON.parse(userStr!).id);
+      const p2pTransactions = transactions.filter(tx => tx.type === 'P2P_TRANSFER');
+      setRecentTransactions(p2pTransactions.slice(0, 10));
+      
+    } catch (error: any) {
+      console.error('Transfer failed:', error);
+      toast.error(error.message || 'Transfer failed');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const getCurrencySymbol = (currency: string) => {
+    const symbols: { [key: string]: string } = {
+      'USD': '$',
+      'EUR': '€',
+      'GBP': '£',
+      'JPY': '¥',
+      'INR': '₹'
+    };
+    return symbols[currency] || currency;
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
+    
+    if (diffInHours < 1) return 'Just now';
+    if (diffInHours < 24) return `${Math.floor(diffInHours)}h ago`;
+    if (diffInHours < 48) return '1d ago';
+    return `${Math.floor(diffInHours / 24)}d ago`;
   };
 
   const bgColor = theme === 'dark' ? 'from-cyan-900 to-blue-900' : 'from-cyan-50 to-blue-50';
@@ -86,6 +224,50 @@ export function P2PTransfer({ onBack }: P2PTransferProps) {
             <Card className="p-6 bg-white shadow-lg border-0">
               <div className="space-y-4">
                 <div className="space-y-2">
+                  <Label className="text-gray-700">Select Wallet</Label>
+                  {isLoadingWallets ? (
+                    <div className="h-12 rounded-xl border border-gray-200 flex items-center justify-center">
+                      <span className="text-gray-500">Loading wallets...</span>
+                    </div>
+                  ) : wallets.length === 0 ? (
+                    <div className="h-12 rounded-xl border border-gray-200 flex items-center justify-center">
+                      <span className="text-gray-500">No wallets available</span>
+                    </div>
+                  ) : (
+                    <Select 
+                      value={selectedWallet?.id.toString()} 
+                      onValueChange={(value: string) => {
+                        const wallet = wallets.find(w => w.id === parseInt(value));
+                        if (wallet) {
+                          setSelectedWallet(wallet);
+                          setSelectedCurrency(wallet.currency);
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="h-12 rounded-xl border-gray-200">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {wallets.map((wallet) => (
+                          <SelectItem key={wallet.id} value={wallet.id.toString()}>
+                            <div className="flex items-center gap-2">
+                              <Wallet className="w-4 h-4" />
+                              <span>{getCurrencySymbol(wallet.currency)} {wallet.balance.toFixed(2)}</span>
+                              <span className="text-gray-500">({wallet.currency})</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                  {selectedWallet && (
+                    <p className="text-xs text-gray-500">
+                      Balance: {getCurrencySymbol(selectedWallet.currency)} {selectedWallet.balance.toFixed(2)}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
                   <Label className="text-gray-700">Recipient</Label>
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
@@ -101,7 +283,7 @@ export function P2PTransfer({ onBack }: P2PTransferProps) {
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-2">
                     <Label className="text-gray-700">Currency</Label>
-                    <Select value={selectedCurrency} onValueChange={setSelectedCurrency}>
+                    <Select value={selectedCurrency} onValueChange={setSelectedCurrency} disabled={!!selectedWallet}>
                       <SelectTrigger className="h-12 rounded-xl border-gray-200">
                         <SelectValue />
                       </SelectTrigger>
@@ -132,6 +314,8 @@ export function P2PTransfer({ onBack }: P2PTransferProps) {
                   <Input
                     placeholder="Add a message"
                     className="h-12 rounded-xl border-gray-200"
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
                   />
                 </div>
 
@@ -150,9 +334,19 @@ export function P2PTransfer({ onBack }: P2PTransferProps) {
                   className="w-full h-12 rounded-xl"
                   style={{ background: '#00BCD4' }}
                   onClick={handleSendMoney}
+                  disabled={isProcessing || isLoadingWallets || wallets.length === 0}
                 >
-                  <Send size={20} className="mr-2" />
-                  Send Money
+                  {isProcessing ? (
+                    <div className="flex items-center">
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                      Processing...
+                    </div>
+                  ) : (
+                    <>
+                      <Send size={20} className="mr-2" />
+                      Send Money
+                    </>
+                  )}
                 </Button>
               </div>
             </Card>
@@ -186,35 +380,48 @@ export function P2PTransfer({ onBack }: P2PTransferProps) {
           </TabsContent>
 
           <TabsContent value="history" className="mt-0">
-            <div className="space-y-3">
-              {transactionHistory.map((tx) => (
-                <Card key={tx.id} className="p-4 border-0 shadow-md">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                        tx.status === 'completed' ? 'bg-green-100' : 'bg-amber-100'
-                      }`}>
-                        {tx.status === 'completed' ? (
-                          <CheckCircle2 className="text-green-600" size={20} />
-                        ) : (
-                          <Clock className="text-amber-600" size={20} />
-                        )}
+            {isLoadingTransactions ? (
+              <div className="text-center py-8">
+                <p className="text-gray-500">Loading transactions...</p>
+              </div>
+            ) : recentTransactions.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-gray-500">No P2P transactions yet</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {recentTransactions.map((tx) => (
+                  <Card key={tx.id} className="p-4 border-0 shadow-md">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                          tx.status === 'COMPLETED' ? 'bg-green-100' : 
+                          tx.status === 'PENDING' ? 'bg-amber-100' : 'bg-red-100'
+                        }`}>
+                          {tx.status === 'COMPLETED' ? (
+                            <CheckCircle2 className="text-green-600" size={20} />
+                          ) : tx.status === 'PENDING' ? (
+                            <Clock className="text-amber-600" size={20} />
+                          ) : (
+                            <Clock className="text-red-600" size={20} />
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-gray-900">{tx.recipient || 'P2P Transfer'}</p>
+                          <p className="text-xs text-gray-500">{formatDate(tx.createdAt)}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-gray-900">{tx.name}</p>
-                        <p className="text-xs text-gray-500">{tx.date}</p>
+                      <div className="text-right">
+                        <p className="text-red-600">
+                          -{getCurrencySymbol(tx.currency)}{tx.amount.toFixed(2)}
+                        </p>
+                        <p className="text-xs text-gray-500 capitalize">{tx.status.toLowerCase()}</p>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className={`${tx.amount > 0 ? 'text-green-600' : 'text-gray-900'}`}>
-                        {tx.amount > 0 ? '+' : ''}{tx.amount} {tx.currency}
-                      </p>
-                      <p className="text-xs text-gray-500 capitalize">{tx.status}</p>
-                    </div>
-                  </div>
-                </Card>
-              ))}
-            </div>
+                  </Card>
+                ))}
+              </div>
+            )}
           </TabsContent>
         </Tabs>
       </div>
@@ -237,8 +444,16 @@ export function P2PTransfer({ onBack }: P2PTransferProps) {
             </Button>
             <Button
               onClick={confirmTransfer}
+              disabled={isProcessing}
             >
-              Confirm
+              {isProcessing ? (
+                <div className="flex items-center">
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                  Processing...
+                </div>
+              ) : (
+                'Confirm'
+              )}
             </Button>
           </div>
         </DialogContent>

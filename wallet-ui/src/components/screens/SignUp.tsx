@@ -3,8 +3,10 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Card } from '../ui/card';
-import { ArrowLeft, Mail, Lock, User, Phone } from 'lucide-react';
+import { ArrowLeft, Mail, Lock, User, Phone, UserCheck } from 'lucide-react';
 import { useAppContext } from '../../App';
+import { authApi, AuthRequest } from '../../services/walletApi';
+import { toast } from 'sonner';
 
 interface SignUpProps {
   onBack: () => void;
@@ -13,22 +15,71 @@ interface SignUpProps {
 
 export function SignUp({ onBack, onNext }: SignUpProps) {
   const { setUserName, setUserPassword } = useAppContext();
+  const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
     phone: '',
+    studentId: '',
     password: '',
     confirmPassword: ''
   });
 
-  const handleContinue = () => {
-    if (formData.fullName) {
-      setUserName(formData.fullName);
+  const handleContinue = async () => {
+    // Validation
+    if (!formData.fullName || !formData.email || !formData.phone || !formData.studentId || !formData.password || !formData.confirmPassword) {
+      toast.error('Please fill in all fields');
+      return;
     }
-    if (formData.password) {
+
+    if (formData.password !== formData.confirmPassword) {
+      toast.error('Passwords do not match');
+      return;
+    }
+
+    if (formData.password.length < 8) {
+      toast.error('Password must be at least 8 characters long');
+      return;
+    }
+
+    setIsLoading(true);
+    
+    try {
+      const authRequest: AuthRequest = {
+        email: formData.email,
+        password: formData.password,
+        firstName: formData.fullName?.split(' ')[0] || '',
+        lastName: formData.fullName?.split(' ').slice(1).join(' ') || '',
+        phoneNumber: formData.phone,
+        studentId: formData.studentId,
+        campusName: '' // Optional for now
+      };
+
+      const response = await authApi.register(authRequest);
+      
+      // Store user data and token
+      setUserName(response.fullName);
       setUserPassword(formData.password);
+      
+      // Store token in localStorage for future API calls
+      localStorage.setItem('authToken', response.token);
+      localStorage.setItem('user', JSON.stringify({
+        id: response.userId,
+        email: response.email,
+        fullName: response.fullName,
+        role: response.role,
+        status: response.status,
+        kycStatus: response.kycStatus || 'NOT_STARTED'
+      }));
+      
+      toast.success('Account created successfully!');
+      onNext();
+    } catch (error) {
+      console.error('Registration error:', error);
+      toast.error(error instanceof Error ? error.message : 'Registration failed');
+    } finally {
+      setIsLoading(false);
     }
-    onNext();
   };
 
   return (
@@ -94,6 +145,21 @@ export function SignUp({ onBack, onNext }: SignUpProps) {
             </div>
 
             <div className="space-y-2">
+              <Label htmlFor="studentId" className="text-gray-700">Student ID</Label>
+              <div className="relative">
+                <UserCheck className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                <Input
+                  id="studentId"
+                  type="text"
+                  placeholder="Enter your student ID"
+                  className="pl-10 h-12 rounded-xl border-gray-200"
+                  value={formData.studentId}
+                  onChange={(e) => setFormData({ ...formData, studentId: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
               <Label htmlFor="password" className="text-gray-700">Password</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
@@ -136,9 +202,10 @@ export function SignUp({ onBack, onNext }: SignUpProps) {
       <div className="p-6">
         <Button 
           onClick={handleContinue}
+          disabled={isLoading}
           className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl h-12"
         >
-          Continue
+          {isLoading ? 'Creating Account...' : 'Continue'}
         </Button>
       </div>
     </div>

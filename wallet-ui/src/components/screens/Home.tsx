@@ -1,27 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { WalletCard } from '../wallet/WalletCard';
 import { Card } from '../ui/card';
 import { Button } from '../ui/button';
-import { 
-  Eye, 
-  EyeOff, 
-  Send, 
-  QrCode, 
-  ArrowLeftRight, 
-  Bell, 
-  Settings,
-  TrendingUp,
-  Clock,
-  AlertCircle,
-  Send as SendIcon
-} from 'lucide-react';
 import { Avatar, AvatarFallback } from '../ui/avatar';
 import { Badge } from '../ui/badge';
-import { useAppContext } from '../../App';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { Switch } from '../ui/switch';
 import { Label } from '../ui/label';
+import { useAppContext } from '../../App';
+import { walletApi, transactionApi } from '../../services/walletApi';
+import { Wallet, Transaction } from '../../services/walletApi';
+import { NotificationsPanel } from '../notifications/NotificationsPanel';
+import { Bell, Settings, Eye, EyeOff, Send, QrCode, ArrowLeftRight, AlertCircle as AlertCircleIcon, Plus, Clock, LogOut } from 'lucide-react';
 
 interface HomeProps {
   onNavigate: (screen: string) => void;
@@ -41,26 +32,159 @@ const recentTransactions = [
   { id: 3, name: 'Michael Chen', type: 'P2P Received', amount: 100, currency: 'EUR', time: '1d ago' }
 ];
 
-const notifications = [
-  { id: 1, message: 'P2P transfer received: $100 from Sarah Johnson', time: '2h ago' },
-  { id: 2, message: 'Your EUR wallet balance is low', time: '5h ago' },
-  { id: 3, message: 'New rate alert triggered for JPY', time: '1d ago' }
-];
-
 export function Home({ onNavigate }: HomeProps) {
   const [isBalanceHidden, setIsBalanceHidden] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const { userName, theme, toggleTheme } = useAppContext();
+  const [totalBalanceUSD, setTotalBalanceUSD] = useState(0);
+  const [wallets, setWallets] = useState<Wallet[]>([]);
+  const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
+  const [isLoadingBalance, setIsLoadingBalance] = useState(true);
+  const [isLoadingTransactions, setIsLoadingTransactions] = useState(true);
+  const [kycStatus, setKycStatus] = useState<'NOT_STARTED' | 'PENDING' | 'VERIFIED'>('NOT_STARTED');
   
-  const totalBalanceUSD = 8250.40;
+  const { theme, toggleTheme, logout, userName } = useAppContext();
   const displayName = userName || 'Guest';
-  const initials = displayName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  const initials = displayName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
+
+  // Get KYC status from localStorage on component mount
+  useEffect(() => {
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      const user = JSON.parse(userStr);
+      setKycStatus(user.kycStatus || 'NOT_STARTED');
+    }
+  }, []);
+
+  // Fetch user data and balances from API
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        setIsLoadingBalance(true);
+        setIsLoadingTransactions(true);
+        
+        const userStr = localStorage.getItem('user');
+        if (!userStr) {
+          console.log('No user found in localStorage');
+          return;
+        }
+
+        const user = JSON.parse(userStr);
+        console.log('Fetching data for user ID:', user.id);
+        
+        // Fetch user wallets
+        const userWallets = await walletApi.getUserWallets(user.id);
+        console.log('User wallets:', userWallets);
+        setWallets(userWallets);
+        
+        // Fetch total balance
+        const balanceData = await walletApi.getTotalBalance(user.id);
+        console.log('Balance data received:', balanceData);
+        setTotalBalanceUSD(balanceData.totalBalance);
+        
+        // Fetch recent transactions
+        const transactions = await transactionApi.getUserTransactions(user.id);
+        console.log('Transactions received:', transactions);
+        setRecentTransactions(transactions.slice(0, 5)); // Show only last 5 transactions
+        
+      } catch (error) {
+        console.error('Failed to fetch user data:', error);
+        console.error('Error details:', error.message);
+        if (error.stack) {
+          console.error('Error stack:', error.stack);
+        }
+        toast.error('Failed to fetch latest data');
+      } finally {
+        setIsLoadingBalance(false);
+        setIsLoadingTransactions(false);
+      }
+    };
+
+    fetchUserData();
+  }, []);
 
   const bgColor = theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50';
   const cardBg = theme === 'dark' ? 'bg-gray-800' : 'bg-white';
   const textColor = theme === 'dark' ? 'text-gray-100' : 'text-gray-900';
   const textSecondary = theme === 'dark' ? 'text-gray-400' : 'text-gray-600';
+
+  // Helper functions
+  const getCurrencySymbol = (currency: string) => {
+    const symbols: { [key: string]: string } = {
+      'USD': '$',
+      'EUR': '€',
+      'GBP': '£',
+      'JPY': '¥',
+      'INR': '₹'
+    };
+    return symbols[currency] || currency;
+  };
+
+  const getCurrencyColor = (currency: string) => {
+    const colors: { [key: string]: string } = {
+      'USD': '#2ECC71',
+      'EUR': '#9B59B6',
+      'GBP': '#E67E22',
+      'JPY': '#E74C3C',
+      'INR': '#F4C542'
+    };
+    return colors[currency] || '#3498DB';
+  };
+
+  const getDescription = (tx: Transaction) => {
+    if (tx.description) return tx.description;
+    
+    switch (tx.type) {
+      case 'P2P_TRANSFER':
+        return tx.recipient ? `Sent to ${tx.recipient}` : 'P2P Transfer';
+      case 'CAMPUS_PAYMENT':
+        return 'Campus Payment';
+      case 'REMITTANCE':
+        return 'Remittance';
+      case 'ADD_FUNDS':
+        return 'Funds Added';
+      case 'DEDUCT_FUNDS':
+        return 'Funds Deducted';
+      default:
+        return tx.type;
+    }
+  };
+
+  const formatTransactionType = (type: string) => {
+    const types: { [key: string]: string } = {
+      'P2P_TRANSFER': 'P2P Transfer',
+      'CAMPUS_PAYMENT': 'Campus Payment',
+      'REMITTANCE': 'Remittance',
+      'ADD_FUNDS': 'Credit',
+      'DEDUCT_FUNDS': 'Debit'
+    };
+    return types[type] || type;
+  };
+
+  const isCreditTransaction = (tx: Transaction) => {
+    return tx.type === 'ADD_FUNDS';
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
+    
+    if (diffInHours < 1) return 'Just now';
+    if (diffInHours < 24) return `${Math.floor(diffInHours)}h ago`;
+    if (diffInHours < 48) return '1d ago';
+    return `${Math.floor(diffInHours / 24)}d ago`;
+  };
+
+  // Get current user ID from localStorage
+  const getUserId = () => {
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      const user = JSON.parse(userStr);
+      return user.id;
+    }
+    return null;
+  };
 
   return (
     <div className={`min-h-screen ${bgColor}`}>
@@ -106,15 +230,46 @@ export function Home({ onNavigate }: HomeProps) {
           </div>
           {isBalanceHidden ? (
             <p className="text-white text-3xl">••••••</p>
+          ) : isLoadingBalance ? (
+            <p className="text-white text-3xl">Loading...</p>
           ) : (
             <p className="text-white text-3xl">${totalBalanceUSD.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
           )}
           <div className="flex items-center gap-2 mt-2">
-            <TrendingUp size={14} className="text-green-300" />
             <p className="text-green-300 text-xs">+5.2% this month</p>
           </div>
         </div>
       </div>
+
+      {/* KYC Reminder */}
+      {kycStatus !== 'VERIFIED' && (
+        <div className="px-6 -mt-4 mb-6">
+          <Card className={`p-4 border-l-4 ${kycStatus === 'NOT_STARTED' ? 'border-l-amber-500 bg-amber-50' : 'border-l-blue-500 bg-blue-50'} shadow-lg border-0`}>
+            <div className="flex items-start gap-3">
+              <AlertCircleIcon className={`mt-0.5 ${kycStatus === 'NOT_STARTED' ? 'text-amber-600' : 'text-blue-600'}`} size={20} />
+              <div className="flex-1">
+                <h3 className={`font-semibold text-sm mb-1 ${kycStatus === 'NOT_STARTED' ? 'text-amber-800' : 'text-blue-800'}`}>
+                  {kycStatus === 'NOT_STARTED' ? 'Complete KYC Verification' : 'KYC Verification Pending'}
+                </h3>
+                <p className={`text-xs mb-3 ${kycStatus === 'NOT_STARTED' ? 'text-amber-700' : 'text-blue-700'}`}>
+                  {kycStatus === 'NOT_STARTED' 
+                    ? 'Verify your identity to unlock full wallet features and higher transaction limits.' 
+                    : 'Your KYC verification is under review. We\'ll notify you once it\'s approved.'}
+                </p>
+                {kycStatus === 'NOT_STARTED' && (
+                  <Button 
+                    size="sm" 
+                    onClick={() => onNavigate('kyc1')}
+                    className="bg-amber-600 hover:bg-amber-700 text-white text-xs h-8"
+                  >
+                    Start Verification
+                  </Button>
+                )}
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
 
       {/* Quick Actions */}
       <div className="px-6 -mt-6 mb-6">
@@ -149,20 +304,11 @@ export function Home({ onNavigate }: HomeProps) {
               <span className={`text-xs ${textColor}`}>Convert</span>
             </button>
             <button 
-              onClick={() => onNavigate('analytics')}
-              className="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700"
-            >
-              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center">
-                <TrendingUp className="text-white" size={20} />
-              </div>
-              <span className={`text-xs ${textColor}`}>Analytics</span>
-            </button>
-            <button 
               onClick={() => onNavigate('remittance')}
               className="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700"
             >
               <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center">
-                <SendIcon className="text-white" size={20} />
+                <Send className="text-white" size={20} />
               </div>
               <span className={`text-xs ${textColor}`}>Remittance</span>
             </button>
@@ -171,7 +317,7 @@ export function Home({ onNavigate }: HomeProps) {
               className="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700"
             >
               <div className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center">
-                <AlertCircle className="text-white" size={20} />
+                <AlertCircleIcon className="text-white" size={20} />
               </div>
               <span className={`text-xs ${textColor}`}>Alerts</span>
             </button>
@@ -188,13 +334,34 @@ export function Home({ onNavigate }: HomeProps) {
           </Button>
         </div>
         <div className="space-y-3">
-          {currencies.slice(0, 3).map((wallet) => (
-            <WalletCard 
-              key={wallet.currency}
-              {...wallet}
-              isBalanceHidden={isBalanceHidden}
-            />
-          ))}
+          {wallets.length > 0 ? (
+            wallets.slice(0, 3).map((wallet) => (
+              <WalletCard 
+                key={wallet.id}
+                currency={wallet.currency}
+                symbol={getCurrencySymbol(wallet.currency)}
+                balance={wallet.balance}
+                color={getCurrencyColor(wallet.currency)}
+                isBalanceHidden={isBalanceHidden}
+              />
+            ))
+          ) : (
+            <div className={`text-center py-8 ${textSecondary}`}>
+              <p>No wallets found</p>
+            </div>
+          )}
+          
+          {/* Create Wallet Button - Always visible */}
+          <div className="mt-4">
+            <Button 
+              onClick={() => onNavigate('createWallet')}
+              className="w-full"
+              variant="outline"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Create New Wallet
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -206,55 +373,51 @@ export function Home({ onNavigate }: HomeProps) {
             variant="ghost" 
             size="sm" 
             className="text-sm h-auto p-0"
-            onClick={() => onNavigate('analytics')}
           >
             View All
           </Button>
         </div>
         <Card className={`divide-y border-0 shadow-lg ${cardBg}`}>
-          {recentTransactions.map((tx) => (
-            <div key={tx.id} className="p-4 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                  tx.type.includes('Received') ? 'bg-green-100 dark:bg-green-900' : 'bg-gray-100 dark:bg-gray-700'
-                }`}>
-                  <Clock className={tx.type.includes('Received') ? 'text-green-600' : 'text-gray-600'} size={18} />
+          {recentTransactions.length > 0 ? (
+            recentTransactions.map((tx) => (
+              <div key={tx.id} className="p-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                    isCreditTransaction(tx) ? 'bg-green-100 dark:bg-green-900' : 'bg-red-100 dark:bg-red-900'
+                  }`}>
+                    <Clock className={isCreditTransaction(tx) ? 'text-green-600' : 'text-red-600'} size={18} />
+                  </div>
+                  <div>
+                    <p className={`text-sm ${textColor}`}>{getDescription(tx)}</p>
+                    <p className={`text-xs ${textSecondary}`}>{formatTransactionType(tx.type)}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className={`text-sm ${textColor}`}>{tx.name}</p>
-                  <p className={`text-xs ${textSecondary}`}>{tx.type}</p>
+                <div className="text-right">
+                  <p className={`text-sm ${isCreditTransaction(tx) ? 'text-green-600' : 'text-red-600'}`}>
+                    {isCreditTransaction(tx) ? '+' : '-'}{getCurrencySymbol(tx.currency)}{Math.abs(tx.amount).toFixed(2)}
+                  </p>
+                  <p className={`text-xs ${textSecondary}`}>{formatDate(tx.createdAt)}</p>
                 </div>
               </div>
-              <div className="text-right">
-                <p className={`text-sm ${tx.amount > 0 ? 'text-green-600' : textColor}`}>
-                  {tx.amount > 0 ? '+' : ''}{tx.amount} {tx.currency}
-                </p>
-                <p className={`text-xs ${textSecondary}`}>{tx.time}</p>
-              </div>
+            ))
+          ) : isLoadingTransactions ? (
+            <div className="text-center py-8">
+              <p className={textSecondary}>Loading transactions...</p>
             </div>
-          ))}
+          ) : (
+            <div className={`text-center py-8 ${textSecondary}`}>
+              <p>No recent transactions</p>
+            </div>
+          )}
         </Card>
       </div>
 
-      {/* Notifications Dialog */}
-      <Dialog open={showNotifications} onOpenChange={setShowNotifications}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Notifications</DialogTitle>
-            <DialogDescription>
-              Stay updated with your recent activities
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3 py-4">
-            {notifications.map((notif) => (
-              <div key={notif.id} className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                <p className="text-sm text-gray-900 dark:text-gray-100">{notif.message}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{notif.time}</p>
-              </div>
-            ))}
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Notifications Panel */}
+      <NotificationsPanel 
+        isOpen={showNotifications}
+        onClose={() => setShowNotifications(false)}
+        userId={getUserId() || ''}
+      />
 
       {/* Settings Dialog */}
       <Dialog open={showSettings} onOpenChange={setShowSettings}>
@@ -275,6 +438,20 @@ export function Home({ onNavigate }: HomeProps) {
                 checked={theme === 'dark'} 
                 onCheckedChange={toggleTheme}
               />
+            </div>
+            
+            <div className="border-t pt-4">
+              <Button 
+                variant="outline" 
+                className="w-full flex items-center gap-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+                onClick={() => {
+                  logout();
+                  setShowSettings(false);
+                }}
+              >
+                <LogOut size={16} />
+                Logout
+              </Button>
             </div>
           </div>
         </DialogContent>
