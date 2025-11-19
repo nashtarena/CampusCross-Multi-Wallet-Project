@@ -22,23 +22,29 @@ export interface User {
 
 export interface Wallet {
   id: number;
+  userId: number;
   walletAddress: string;
   walletName?: string;
   type: string;
   status: string;
   balance: number;
   currencyCode: string;
+  currency: string;
   isDefault: boolean;
   dailyLimit: number;
   monthlyLimit: number;
+  isFrozen: boolean;
+  isClosed: boolean;
 }
 
 export interface Transaction {
+  id: string;
   transactionId: string;
   type: 'P2P_TRANSFER' | 'CAMPUS_PAYMENT' | 'REMITTANCE' | 'ADD_FUNDS' | 'DEDUCT_FUNDS';
   status: 'PENDING' | 'COMPLETED' | 'FAILED' | 'CANCELLED';
   amount: number;
   currencyCode: string;
+  currency: string;
   description: string;
   createdAt: string;
   completedAt?: string;
@@ -58,6 +64,7 @@ export interface Transaction {
   deviceFingerprint?: string;
   flagged?: boolean;
   flagReason?: string;
+  recipient?: string;
 }
 
 export interface AuthRequest {
@@ -233,7 +240,7 @@ export const walletApi = {
     return response.json();
   },
 
-  deleteWallet: async (walletId: number): Promise<void> => {
+deleteWallet: async (walletId: number): Promise<void> => {
     const response = await fetch(`${WALLET_API_BASE_URL}/wallets/${walletId}`, {
       method: 'DELETE',
       headers: getAuthHeaders()
@@ -244,7 +251,6 @@ export const walletApi = {
       throw new Error(`Failed to delete wallet: ${errorText}`);
     }
   },
-
   addFunds: async (walletId: number, amount: number, currency: string): Promise<Wallet> => {
     const response = await fetch(`${WALLET_API_BASE_URL}/wallets/${walletId}/add-funds`, {
       method: 'POST',

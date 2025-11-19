@@ -247,6 +247,7 @@ public class WalletController {
         }
     }
     
+<<<<<<< HEAD
     @DeleteMapping("/{walletId}")
     public ResponseEntity<?> deleteWallet(@PathVariable Long walletId, HttpServletRequest httpRequest) {
         try {
@@ -276,6 +277,8 @@ public class WalletController {
         }
     }
     
+=======
+>>>>>>> 059d87042c298e8aa2a246bdee42e666e65fbcd7
     // Request/Response DTOs
     public record CreateWalletRequest(
             String walletName,

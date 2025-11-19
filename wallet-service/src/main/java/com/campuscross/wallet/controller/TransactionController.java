@@ -1,12 +1,16 @@
 package com.campuscross.wallet.controller;
 
 import com.campuscross.wallet.entity.Transaction;
+<<<<<<< HEAD
 import com.campuscross.wallet.entity.User;
 import com.campuscross.wallet.entity.Wallet;
 import com.campuscross.wallet.service.TransactionService;
 import com.campuscross.wallet.repository.UserRepository;
 import com.campuscross.wallet.repository.WalletRepository;
 import java.util.Optional;
+=======
+import com.campuscross.wallet.service.TransactionService;
+>>>>>>> 059d87042c298e8aa2a246bdee42e666e65fbcd7
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -27,8 +31,11 @@ import java.util.List;
 public class TransactionController {
     
     private final TransactionService transactionService;
+<<<<<<< HEAD
     private final UserRepository userRepository;
     private final WalletRepository walletRepository;
+=======
+>>>>>>> 059d87042c298e8aa2a246bdee42e666e65fbcd7
     
     @PostMapping("/p2p-transfer")
     public ResponseEntity<?> createP2PTransfer(@RequestBody P2PTransferRequest request, 
@@ -36,6 +43,7 @@ public class TransactionController {
         try {
             String ipAddress = getClientIpAddress(httpRequest);
             
+<<<<<<< HEAD
             // Find recipient by student ID or phone number
             User recipient = null;
             String identifier = request.recipientIdentifier();
@@ -84,6 +92,11 @@ public class TransactionController {
             Transaction transaction = transactionService.createP2PTransfer(
                     request.sourceWalletId(),
                     targetWallet.getWalletAddress(),
+=======
+            Transaction transaction = transactionService.createP2PTransfer(
+                    request.sourceWalletId(),
+                    request.targetWalletAddress(),
+>>>>>>> 059d87042c298e8aa2a246bdee42e666e65fbcd7
                     request.amount(),
                     request.description(),
                     ipAddress
@@ -313,7 +326,11 @@ public class TransactionController {
     // Request/Response DTOs
     public record P2PTransferRequest(
             Long sourceWalletId,
+<<<<<<< HEAD
             String recipientIdentifier, // Can be student ID or phone number
+=======
+            String targetWalletAddress,
+>>>>>>> 059d87042c298e8aa2a246bdee42e666e65fbcd7
             BigDecimal amount,
             String description
     ) {}

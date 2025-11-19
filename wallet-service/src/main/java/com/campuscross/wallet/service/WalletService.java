@@ -171,15 +171,19 @@ public class WalletService {
                 .orElseThrow(() -> new RuntimeException("Wallet not found"));
     }
     
+<<<<<<< HEAD
     public Wallet getWalletById(Long walletId) {
         return walletRepository.findById(walletId)
                 .orElseThrow(() -> new RuntimeException("Wallet not found"));
     }
     
+=======
+>>>>>>> 059d87042c298e8aa2a246bdee42e666e65fbcd7
     public BigDecimal getTotalBalance(String userId) {
         return walletRepository.getTotalBalanceByUserId(userId);
     }
     
+<<<<<<< HEAD
     public void deleteWallet(Long walletId) {
         Wallet wallet = getWalletById(walletId);
         
@@ -196,6 +200,8 @@ public class WalletService {
         walletRepository.delete(wallet);
     }
     
+=======
+>>>>>>> 059d87042c298e8aa2a246bdee42e666e65fbcd7
     private String generateWalletAddress() {
         return "WLT-" + UUID.randomUUID().toString().replace("-", "").toUpperCase().substring(0, 16);
     }

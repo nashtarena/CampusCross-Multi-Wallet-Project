@@ -76,7 +76,6 @@ export default function App() {
     localStorage.removeItem('authToken');
     setCurrentScreen('welcome');
   };
-
   React.useEffect(() => {
     if (userName) {
       localStorage.setItem('userName', userName);
@@ -218,7 +217,7 @@ export default function App() {
               <button onClick={() => setCurrentScreen('kyc1')} className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded transition">KYC 1</button>
               <button onClick={() => setCurrentScreen('kyc2')} className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded transition">KYC 2</button>
               <button onClick={() => setCurrentScreen('kyc-polling')} className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded transition">Polling</button>
-                            <button onClick={() => setCurrentScreen('home')} className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded transition">Home</button>
+              <button onClick={() => setCurrentScreen('home')} className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded transition">Home</button>
               <button onClick={() => setCurrentScreen('conversion')} className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded transition">Convert</button>
               <button onClick={() => setCurrentScreen('p2p')} className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded transition">P2P</button>
               <button onClick={() => setCurrentScreen('campus')} className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded transition">Campus</button>
@@ -226,10 +225,6 @@ export default function App() {
               <button onClick={() => setCurrentScreen('admin-login')} className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded transition">Admin</button>
               <button onClick={() => setCurrentScreen('alerts')} className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded transition">Alerts</button>
               <button onClick={() => setCurrentScreen('createWallet')} className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded transition">Create Wallet</button>
-            </div>
-            <div className="mt-2 pt-2 border-t border-white/20">
-              <p className="text-xs opacity-60">Current: {currentScreen}</p>
-              <p className="text-xs opacity-60">User ID: {userId}</p>
             </div>
           </div>
         )}
