@@ -1,20 +1,14 @@
 package com.campuscross.wallet.service;
 
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import com.campuscross.wallet.entity.RiskScore;
-import com.campuscross.wallet.entity.Transaction;
-import com.campuscross.wallet.repository.RiskScoreRepository;
+import com.campuscross.wallet.entity.Wallet;
 import com.campuscross.wallet.repository.TransactionRepository;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -22,211 +16,141 @@ import lombok.extern.slf4j.Slf4j;
 public class FraudDetectionService {
     
     private final TransactionRepository transactionRepository;
-    private final RiskScoreRepository riskScoreRepository;
     
-    // Thresholds
+    private static final BigDecimal HIGH_VALUE_THRESHOLD = new BigDecimal("10000");
+    private static final BigDecimal SUSPICIOUS_FREQUENCY_THRESHOLD = new BigDecimal("5000");
     private static final int MAX_TRANSACTIONS_PER_HOUR = 10;
     private static final int MAX_TRANSACTIONS_PER_DAY = 50;
-    private static final BigDecimal LARGE_TRANSACTION_THRESHOLD = new BigDecimal("5000.00");
-    private static final BigDecimal UNUSUAL_AMOUNT_THRESHOLD = new BigDecimal("1000.00");
     
-    /**
-     * Analyze transaction for fraud risk
-     */
-    @Transactional
-    public RiskScore analyzeTransaction(Transaction transaction, Long userId) {
-        log.info("Analyzing transaction {} for fraud risk", transaction.getId());
+    public boolean isSuspiciousTransaction(Wallet sourceWallet, Wallet targetWallet, 
+                                         BigDecimal amount, String ipAddress) {
         
-        List<String> riskFactors = new ArrayList<>();
-        BigDecimal riskScore = BigDecimal.ZERO;
-        
-        // 1. Check velocity - transactions in last hour
-        long transactionsLastHour = countRecentTransactions(userId, 1);
-        if (transactionsLastHour > MAX_TRANSACTIONS_PER_HOUR) {
-            riskFactors.add("HIGH_VELOCITY_HOURLY: " + transactionsLastHour + " transactions in last hour");
-            riskScore = riskScore.add(new BigDecimal("30.00"));
+        // Check for high-value transaction
+        if (amount.compareTo(HIGH_VALUE_THRESHOLD) > 0) {
+            log.warn("High-value transaction detected: {} from wallet {}", 
+                    amount, sourceWallet.getWalletAddress());
+            return true;
         }
         
-        // 2. Check velocity - transactions in last day
-        long transactionsLastDay = countRecentTransactions(userId, 24);
-        if (transactionsLastDay > MAX_TRANSACTIONS_PER_DAY) {
-            riskFactors.add("HIGH_VELOCITY_DAILY: " + transactionsLastDay + " transactions in last 24 hours");
-            riskScore = riskScore.add(new BigDecimal("20.00"));
+        // Check transaction frequency
+        if (isHighFrequencyTransaction(sourceWallet.getId())) {
+            log.warn("High-frequency transaction detected from wallet {}", 
+                    sourceWallet.getWalletAddress());
+            return true;
         }
         
-        // 3. Check for large transaction amount
-        if (transaction.getAmount().compareTo(LARGE_TRANSACTION_THRESHOLD) > 0) {
-            riskFactors.add("LARGE_AMOUNT: Transaction amount " + transaction.getAmount() + 
-                    " exceeds threshold " + LARGE_TRANSACTION_THRESHOLD);
-            riskScore = riskScore.add(new BigDecimal("25.00"));
+        // Check for self-transfer patterns (simplified)
+        if (isSelfTransferPattern(sourceWallet, targetWallet)) {
+            log.warn("Suspicious self-transfer pattern detected");
+            return true;
         }
         
-        // 4. Check for unusual transaction pattern
-        BigDecimal avgTransactionAmount = calculateAverageTransactionAmount(userId);
-        if (avgTransactionAmount.compareTo(BigDecimal.ZERO) > 0) {
-            BigDecimal ratio = transaction.getAmount().divide(avgTransactionAmount, 2, java.math.RoundingMode.HALF_UP);
-            if (ratio.compareTo(new BigDecimal("5.00")) > 0) {
-                riskFactors.add("UNUSUAL_PATTERN: Transaction is " + ratio + "x larger than user's average");
-                riskScore = riskScore.add(new BigDecimal("15.00"));
-            }
+        // Check for rapid multiple transactions to same target
+        if (isRapidMultipleTransactions(sourceWallet.getId(), targetWallet.getId())) {
+            log.warn("Rapid multiple transactions to same target detected");
+            return true;
         }
         
-        // 5. Check for rapid successive transfers to same recipient
-        if ("P2P".equals(transaction.getTransactionType())) {
-            long sameRecipientCount = countTransactionsToSameRecipient(transaction.getFromAccountId(), 
-                    transaction.getToAccountId(), 1);
-            if (sameRecipientCount > 3) {
-                riskFactors.add("RAPID_SAME_RECIPIENT: " + sameRecipientCount + 
-                        " transfers to same recipient in last hour");
-                riskScore = riskScore.add(new BigDecimal("20.00"));
-            }
+        // Check for round amounts (potential money laundering)
+        if (isRoundAmount(amount) && amount.compareTo(SUSPICIOUS_FREQUENCY_THRESHOLD) > 0) {
+            log.warn("Suspicious round amount transaction: {}", amount);
+            return true;
         }
         
-        // 6. Check for off-hours activity (midnight to 5 AM)
-        int hour = LocalDateTime.now().getHour();
-        if (hour >= 0 && hour < 5) {
-            riskFactors.add("OFF_HOURS: Transaction at " + hour + ":00");
-            riskScore = riskScore.add(new BigDecimal("10.00"));
-        }
-        
-        // Cap risk score at 100
-        if (riskScore.compareTo(new BigDecimal("100.00")) > 0) {
-            riskScore = new BigDecimal("100.00");
-        }
-        
-        // Determine risk level
-        String riskLevel = determineRiskLevel(riskScore);
-        
-        // Create risk score record
-        RiskScore risk = RiskScore.builder()
-                .transactionId(transaction.getId())
-                .userId(userId)
-                .riskScore(riskScore)
-                .riskLevel(riskLevel)
-                .riskFactors(String.join("; ", riskFactors))
-                .status("PENDING")
-                .build();
-        
-        risk = riskScoreRepository.save(risk);
-        
-        log.info("Risk analysis complete. Score: {}, Level: {}, Factors: {}", 
-                riskScore, riskLevel, riskFactors.size());
-        
-        return risk;
+        return false;
     }
     
-    /**
-     * Check if transaction should be blocked
-     */
-    public boolean shouldBlockTransaction(RiskScore riskScore) {
-        return "CRITICAL".equals(riskScore.getRiskLevel());
+    public boolean isSuspiciousCampusPayment(Wallet wallet, BigDecimal amount, 
+                                           String merchantId, String ipAddress) {
+        
+        // Check for unusually high campus payment
+        if (amount.compareTo(new BigDecimal("1000")) > 0) {
+            log.warn("Unusually high campus payment: {} from wallet {}", 
+                    amount, wallet.getWalletAddress());
+            return true;
+        }
+        
+        // Check if merchant is blacklisted (simplified check)
+        if (isBlacklistedMerchant(merchantId)) {
+            log.warn("Transaction to blacklisted merchant: {}", merchantId);
+            return true;
+        }
+        
+        return false;
     }
     
-    /**
-     * Check if transaction needs manual review
-     */
-    public boolean needsManualReview(RiskScore riskScore) {
-        return "HIGH".equals(riskScore.getRiskLevel()) || "CRITICAL".equals(riskScore.getRiskLevel());
+    public boolean isSuspiciousRemittance(Wallet sourceWallet, Wallet targetWallet, 
+                                         BigDecimal amount, String ipAddress) {
+        
+        // Check for high-value remittance
+        if (amount.compareTo(new BigDecimal("5000")) > 0) {
+            log.warn("High-value remittance detected: {} from wallet {}", 
+                    amount, sourceWallet.getWalletAddress());
+            return true;
+        }
+        
+        // Check for cross-border patterns
+        if (isCrossBorderPattern(sourceWallet, targetWallet)) {
+            log.warn("Cross-border remittance pattern detected");
+            return true;
+        }
+        
+        return false;
     }
     
-    /**
-     * Count recent transactions for a user
-     */
-    private long countRecentTransactions(Long userId, int hours) {
-        LocalDateTime cutoff = LocalDateTime.now().minusHours(hours);
-        return transactionRepository.findAll().stream()
-                .filter(txn -> txn.getCreatedAt().isAfter(cutoff))
-                .filter(txn -> {
-                    // Check if transaction involves this user
-                    return true; // Simplified - in real implementation, would check wallet ownership
-                })
+    private boolean isHighFrequencyTransaction(Long walletId) {
+        LocalDateTime oneHourAgo = LocalDateTime.now().minusHours(1);
+        LocalDateTime oneDayAgo = LocalDateTime.now().minusDays(1);
+        
+        long transactionsLastHour = transactionRepository.findBySourceWalletId(walletId)
+                .stream()
+                .filter(t -> t.getCreatedAt().isAfter(oneHourAgo))
                 .count();
-    }
-    
-    /**
-     * Calculate average transaction amount for a user
-     */
-    private BigDecimal calculateAverageTransactionAmount(Long userId) {
-        List<Transaction> userTransactions = transactionRepository.findAll().stream()
-                .filter(txn -> "completed".equals(txn.getStatus()))
-                .limit(20) // Last 20 transactions
-                .toList();
         
-        if (userTransactions.isEmpty()) {
-            return BigDecimal.ZERO;
-        }
-        
-        BigDecimal total = userTransactions.stream()
-                .map(Transaction::getAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        
-        return total.divide(new BigDecimal(userTransactions.size()), 2, java.math.RoundingMode.HALF_UP);
-    }
-    
-    /**
-     * Count transactions to same recipient in recent hours
-     */
-    private long countTransactionsToSameRecipient(Long fromAccountId, Long toAccountId, int hours) {
-        LocalDateTime cutoff = LocalDateTime.now().minusHours(hours);
-        return transactionRepository.findAll().stream()
-                .filter(txn -> txn.getCreatedAt().isAfter(cutoff))
-                .filter(txn -> fromAccountId.equals(txn.getFromAccountId()) && 
-                              toAccountId.equals(txn.getToAccountId()))
+        long transactionsLastDay = transactionRepository.findBySourceWalletId(walletId)
+                .stream()
+                .filter(t -> t.getCreatedAt().isAfter(oneDayAgo))
                 .count();
+        
+        return transactionsLastHour > MAX_TRANSACTIONS_PER_HOUR || 
+               transactionsLastDay > MAX_TRANSACTIONS_PER_DAY;
     }
     
-    /**
-     * Determine risk level from score
-     */
-    private String determineRiskLevel(BigDecimal score) {
-        if (score.compareTo(new BigDecimal("75.00")) >= 0) {
-            return "CRITICAL";
-        } else if (score.compareTo(new BigDecimal("50.00")) >= 0) {
-            return "HIGH";
-        } else if (score.compareTo(new BigDecimal("25.00")) >= 0) {
-            return "MEDIUM";
-        } else {
-            return "LOW";
-        }
+    private boolean isSelfTransferPattern(Wallet sourceWallet, Wallet targetWallet) {
+        // Simplified check - in reality, this would be more complex
+        return sourceWallet.getUser().getId().equals(targetWallet.getUser().getId()) &&
+               sourceWallet.getCurrencyCode().equals(targetWallet.getCurrencyCode());
     }
     
-    /**
-     * Get pending reviews (for admin dashboard)
-     */
-    @Transactional(readOnly = true)
-    public List<RiskScore> getPendingReviews() {
-        return riskScoreRepository.findByStatus("PENDING");
+    private boolean isRapidMultipleTransactions(Long sourceWalletId, Long targetWalletId) {
+        LocalDateTime fiveMinutesAgo = LocalDateTime.now().minusMinutes(5);
+        
+        long recentTransactions = transactionRepository.findBySourceWalletId(sourceWalletId)
+                .stream()
+                .filter(t -> t.getTargetWallet() != null && 
+                           t.getTargetWallet().getId().equals(targetWalletId) &&
+                           t.getCreatedAt().isAfter(fiveMinutesAgo))
+                .count();
+        
+        return recentTransactions > 3;
     }
     
-    /**
-     * Approve a flagged transaction
-     */
-    @Transactional
-    public void approveTransaction(Long riskScoreId, Long reviewerId) {
-        RiskScore risk = riskScoreRepository.findById(riskScoreId)
-                .orElseThrow(() -> new RuntimeException("Risk score not found"));
-        
-        risk.setStatus("APPROVED");
-        risk.setReviewedAt(LocalDateTime.now());
-        risk.setReviewedBy(reviewerId);
-        riskScoreRepository.save(risk);
-        
-        log.info("Transaction {} approved by reviewer {}", risk.getTransactionId(), reviewerId);
+    private boolean isRoundAmount(BigDecimal amount) {
+        // Check if amount is a round number (e.g., 1000.00, 5000.00)
+        return amount.scale() <= 2 && 
+               amount.remainder(BigDecimal.valueOf(100)).compareTo(BigDecimal.ZERO) == 0;
     }
     
-    /**
-     * Reject a flagged transaction
-     */
-    @Transactional
-    public void rejectTransaction(Long riskScoreId, Long reviewerId) {
-        RiskScore risk = riskScoreRepository.findById(riskScoreId)
-                .orElseThrow(() -> new RuntimeException("Risk score not found"));
-        
-        risk.setStatus("REJECTED");
-        risk.setReviewedAt(LocalDateTime.now());
-        risk.setReviewedBy(reviewerId);
-        riskScoreRepository.save(risk);
-        
-        log.info("Transaction {} rejected by reviewer {}", risk.getTransactionId(), reviewerId);
+    private boolean isBlacklistedMerchant(String merchantId) {
+        // Simplified check - in reality, this would check against a database
+        List<String> blacklistedMerchants = List.of("MERCHANT001", "MERCHANT002", "MERCHANT003");
+        return blacklistedMerchants.contains(merchantId);
+    }
+    
+    private boolean isCrossBorderPattern(Wallet sourceWallet, Wallet targetWallet) {
+        // Simplified check - in reality, this would use IP geolocation and other factors
+        return sourceWallet.getUser().getCampusName() != null &&
+               targetWallet.getUser().getCampusName() != null &&
+               !sourceWallet.getUser().getCampusName().equals(targetWallet.getUser().getCampusName());
     }
 }

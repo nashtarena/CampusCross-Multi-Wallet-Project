@@ -3,32 +3,103 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Card } from '../ui/card';
-import { ArrowLeft, Mail, Lock, User, Phone } from 'lucide-react';
+import { ArrowLeft, Mail, Lock, User, Phone, UserCheck } from 'lucide-react';
 import { useAppContext } from '../../App';
+import { authApi, AuthRequest } from '../../services/walletApi';
+import { toast } from 'sonner';
 
 interface SignUpProps {
   onBack: () => void;
   onNext: () => void;
+  onAdminSuccess?: () => void;
 }
 
-export function SignUp({ onBack, onNext }: SignUpProps) {
-  const { setUserName, setUserPassword } = useAppContext();
+export function SignUp({ onBack, onNext, onAdminSuccess }: SignUpProps) {
+  const { setUserName, setUserPassword, setUserId } = useAppContext();
+  const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
     phone: '',
+    studentId: '',
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    role: 'STUDENT',
+    campusName: ''
   });
 
-  const handleContinue = () => {
-    if (formData.fullName) {
-      setUserName(formData.fullName);
+  const handleContinue = async () => {
+    // Validation
+    const requiredFields = [formData.fullName, formData.email, formData.phone, formData.studentId, formData.password, formData.confirmPassword, formData.campusName];
+    
+    if (requiredFields.some(field => !field)) {
+      toast.error('Please fill in all fields');
+      return;
     }
-    if (formData.password) {
+
+    if (formData.password !== formData.confirmPassword) {
+      toast.error('Passwords do not match');
+      return;
+    }
+
+    if (formData.password.length < 8) {
+      toast.error('Password must be at least 8 characters long');
+      return;
+    }
+
+    setIsLoading(true);
+    
+    try {
+      const authRequest: AuthRequest = {
+        email: formData.email,
+        password: formData.password,
+        firstName: formData.fullName?.split(' ')[0] || '',
+        lastName: formData.fullName?.split(' ').slice(1).join(' ') || '',
+        phoneNumber: formData.phone,
+        studentId: formData.studentId,
+        campusName: formData.campusName || undefined,
+        role: formData.role
+      };
+
+      const response = await authApi.register(authRequest);
+      
+      // Store user data and token
+      setUserName(response.fullName);
       setUserPassword(formData.password);
+      setUserId(parseInt(response.userId));
+      
+      // Store token in localStorage for future API calls
+      localStorage.setItem('authToken', response.token);
+      localStorage.setItem('user', JSON.stringify({
+        id: response.userId,
+        email: response.email,
+        fullName: response.fullName,
+        role: response.role,
+        status: response.status,
+        kycStatus: response.kycStatus || 'NOT_STARTED'
+      }));
+      
+      toast.success('Account created successfully!');
+      
+      // If admin, bypass KYC and go directly to home
+      if (response.role === 'ADMIN') {
+        // Admins don't need KYC, go directly to home
+        if (onAdminSuccess) {
+          onAdminSuccess();
+        } else {
+          // Fallback if callback not provided
+          onNext();
+        }
+      } else {
+        // Students go through KYC process
+        onNext();
+      }
+    } catch (error) {
+      console.error('Registration error:', error);
+      toast.error(error instanceof Error ? error.message : 'Registration failed');
+    } finally {
+      setIsLoading(false);
     }
-    onNext();
   };
 
   return (
@@ -94,6 +165,55 @@ export function SignUp({ onBack, onNext }: SignUpProps) {
             </div>
 
             <div className="space-y-2">
+              <Label htmlFor="role" className="text-gray-700">Account Type</Label>
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                <select
+                  id="role"
+                  className="w-full h-12 rounded-xl border border-gray-200 pl-10 pr-3 text-gray-700 bg-gray-50 appearance-none cursor-pointer"
+                  value={formData.role}
+                  onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                >
+                  <option value="STUDENT">Student</option>
+                  <option value="ADMIN">Administrator</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="campusName" className="text-gray-700">College/University Name *</Label>
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                <Input
+                  id="campusName"
+                  type="text"
+                  placeholder="Enter your institution name"
+                  className="pl-10 h-12 rounded-xl border-gray-200"
+                  value={formData.campusName}
+                  onChange={(e) => setFormData({ ...formData, campusName: e.target.value })}
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="studentId" className="text-gray-700">
+                {formData.role === 'ADMIN' ? 'Admin ID' : 'Student ID'}
+              </Label>
+              <div className="relative">
+                <UserCheck className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                <Input
+                  id="studentId"
+                  type="text"
+                  placeholder="Enter your student ID"
+                  className="pl-10 h-12 rounded-xl border-gray-200"
+                  value={formData.studentId}
+                  onChange={(e) => setFormData({ ...formData, studentId: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
               <Label htmlFor="password" className="text-gray-700">Password</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
@@ -136,9 +256,10 @@ export function SignUp({ onBack, onNext }: SignUpProps) {
       <div className="p-6">
         <Button 
           onClick={handleContinue}
+          disabled={isLoading}
           className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl h-12"
         >
-          Continue
+          {isLoading ? 'Creating Account...' : 'Continue'}
         </Button>
       </div>
     </div>

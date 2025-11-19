@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '../ui/button';
 import { Card } from '../ui/card';
 import { Input } from '../ui/input';
@@ -23,8 +23,51 @@ const activityLogs = [
   { id: 3, action: 'System config', user: 'SuperAdmin', details: 'Rate limits updated', timestamp: '2024-11-09 10:00' }
 ];
 
+interface CollegeUser {
+  fullName: string;
+  studentId: string;
+  email: string;
+  kycStatus: string;
+}
+
 export function AdminPanel({ onBack }: AdminPanelProps) {
-  const [activeTab, setActiveTab] = useState('bulk');
+  const [activeTab, setActiveTab] = useState('users');
+  const [collegeUsers, setCollegeUsers] = useState<CollegeUser[]>([]);
+  const [adminCollege, setAdminCollege] = useState('');
+
+  useEffect(() => {
+    // Get admin's college from localStorage
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      const user = JSON.parse(userStr);
+      setAdminCollege('Default University'); // Using hardcoded value since campusName is not in AuthResponse
+      
+      // Mock data for demonstration - in real app, this would be an API call
+      // to fetch users from the same college
+      const mockCollegeUsers = [
+        {
+          fullName: 'Alice Johnson',
+          studentId: 'STU001',
+          email: 'alice@college.edu',
+          kycStatus: 'COMPLETED'
+        },
+        {
+          fullName: 'Bob Smith',
+          studentId: 'STU002', 
+          email: 'bob@college.edu',
+          kycStatus: 'PENDING'
+        },
+        {
+          fullName: 'Carol Williams',
+          studentId: 'STU003',
+          email: 'carol@college.edu', 
+          kycStatus: 'NOT_STARTED'
+        }
+      ];
+      
+      setCollegeUsers(mockCollegeUsers);
+    }
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800">
@@ -63,6 +106,9 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
       <div className="px-6 -mt-4">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="w-full bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-1 mb-6">
+            <TabsTrigger value="users" className="flex-1 rounded-lg data-[state=active]:bg-white/10 data-[state=active]:text-white text-white/60">
+              Users
+            </TabsTrigger>
             <TabsTrigger value="bulk" className="flex-1 rounded-lg data-[state=active]:bg-white/10 data-[state=active]:text-white text-white/60">
               Bulk
             </TabsTrigger>
@@ -73,6 +119,50 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
               Logs
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="users" className="mt-0 space-y-4">
+            <Card className="p-6 bg-white/5 backdrop-blur-sm border-white/10">
+              <h3 className="text-white mb-4">College Users</h3>
+              
+              <div className="bg-white/5 rounded-xl p-4 mb-4">
+                <p className="text-sm text-white/60 mb-1">Your Institution</p>
+                <p className="text-white font-medium">
+                  {adminCollege || 'Loading...'}
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                {collegeUsers.length > 0 ? (
+                  collegeUsers.map((user: CollegeUser, index: number) => (
+                    <Card key={index} className="p-4 bg-white/5 backdrop-blur-sm border-white/10">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center">
+                            <Users size={20} className="text-blue-400" />
+                          </div>
+                          <div>
+                            <p className="text-white font-medium">{user.fullName}</p>
+                            <p className="text-xs text-white/60">{user.studentId}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <Badge className="bg-green-500/20 text-green-400">
+                            {user.kycStatus || 'NOT_STARTED'}
+                          </Badge>
+                          <p className="text-xs text-white/60 mt-1">{user.email}</p>
+                        </div>
+                      </div>
+                    </Card>
+                  ))
+                ) : (
+                  <div className="text-center py-8">
+                    <Users className="text-white/20 mx-auto mb-3" size={48} />
+                    <p className="text-white/60">No users found from your institution</p>
+                  </div>
+                )}
+              </div>
+            </Card>
+          </TabsContent>
 
           <TabsContent value="bulk" className="mt-0 space-y-4">
             <Card className="p-6 bg-white/5 backdrop-blur-sm border-white/10">

@@ -3,16 +3,16 @@ import { Welcome } from './components/screens/Welcome';
 import { SignUp } from './components/screens/SignUp';
 import { KYCTier1 } from './components/screens/KYCTier1';
 import { KYCTier2 } from './components/screens/KYCTier2';
-import { KYCStatusPolling } from './components/screens/KYCStatusPolling'; // NEW - You need to create this
-import { BiometricLogin } from './components/screens/BiometricLogin';
+import { KYCStatusPolling } from './components/screens/KYCStatusPolling';
 import { Home } from './components/screens/Home';
-import { CurrencyConversion } from './components/screens/CurrencyConversion';
 import { P2PTransfer } from './components/screens/P2PTransfer';
+import { CurrencyConversion } from './components/screens/CurrencyConversion';
 import { CampusPayments } from './components/screens/CampusPayments';
 import { Remittance } from './components/screens/Remittance';
 import { AdminPanel } from './components/screens/AdminPanel';
+import { AdminLogin } from './components/screens/AdminLogin';
 import { RateAlerts } from './components/screens/RateAlerts';
-import { Analytics } from './components/screens/Analytics';
+import { CreateWallet } from './components/screens/CreateWallet';
 import { Toaster } from './components/ui/sonner';
 
 type Screen = 
@@ -20,17 +20,17 @@ type Screen =
   | 'signup' 
   | 'kyc1' 
   | 'kyc2' 
-  | 'kyc-polling' // NEW - Added polling screen
-  | 'biometric' 
+  | 'kyc-polling'
   | 'home' 
   | 'conversion' 
   | 'p2p' 
   | 'campus' 
   | 'remittance' 
+  | 'admin-login'
   | 'admin' 
   | 'alerts' 
-  | 'analytics'
-  | 'settings';
+  | 'settings'
+  | 'createWallet';
 
 interface AppContextType {
   userName: string;
@@ -41,6 +41,7 @@ interface AppContextType {
   setUserId: (id: number) => void;
   theme: 'light' | 'dark';
   toggleTheme: () => void;
+  logout: () => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -55,113 +56,138 @@ export const useAppContext = () => {
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('welcome');
-  const [userName, setUserName] = useState('');
-  const [userPassword, setUserPassword] = useState('');
-  const [userId, setUserId] = useState(9002); // Store userId in state
-  const [accessToken, setAccessToken] = useState(''); // Store Sumsub access token
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [userName, setUserName] = useState(() => localStorage.getItem('userName') || '');
+  const [userPassword, setUserPassword] = useState(() => localStorage.getItem('userPassword') || '');
+  const [userId, setUserId] = useState(9002);
+  const [accessToken, setAccessToken] = useState('');
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => (localStorage.getItem('theme') as 'light' | 'dark') || 'light');
 
   const toggleTheme = () => {
-    setTheme(prev => prev === 'light' ? 'dark' : 'light');
+    const newTheme = theme === 'light' ? 'dark' : 'light';
+    setTheme(newTheme);
+    localStorage.setItem('theme', newTheme);
   };
+
+  const logout = () => {
+    setUserName('');
+    setUserPassword('');
+    localStorage.removeItem('userName');
+    localStorage.removeItem('userPassword');
+    localStorage.removeItem('authToken');
+    setCurrentScreen('welcome');
+  };
+
+  React.useEffect(() => {
+    if (userName) {
+      localStorage.setItem('userName', userName);
+    }
+  }, [userName]);
+
+  React.useEffect(() => {
+    if (userPassword) {
+      localStorage.setItem('userPassword', userPassword);
+    }
+  }, [userPassword]);
+
+  React.useEffect(() => {
+    const hash = window.location.hash.slice(1);
+    if (hash === 'home') {
+      setCurrentScreen('home');
+    }
+  }, []);
 
   const renderScreen = () => {
     switch (currentScreen) {
       case 'welcome':
-        return <Welcome onNext={() => setCurrentScreen('signup')} />;
-      
+        return <Welcome onNext={() => setCurrentScreen('signup')} onNavigateToHome={() => {
+          const userStr = localStorage.getItem('user');
+          console.log('Navigation triggered - localStorage user:', userStr);
+          if (userStr) {
+            const user = JSON.parse(userStr);
+            console.log('Parsed user for navigation:', user);
+            console.log('User role for routing:', user.role);
+            if (user.role === 'ADMIN') {
+              console.log('✅ Routing to admin dashboard');
+              setCurrentScreen('admin');
+            } else {
+              console.log('❌ Routing to home page (role is not ADMIN)');
+              setCurrentScreen('home');
+            }
+          } else {
+            console.log('❌ No user data found, routing to home page');
+            setCurrentScreen('home');
+          }
+        }} />;
       case 'signup':
         return (
           <SignUp 
             onBack={() => setCurrentScreen('welcome')}
             onNext={() => setCurrentScreen('kyc1')}
+            onAdminSuccess={() => setCurrentScreen('admin')}
           />
         );
-      
-      // UPDATED: KYC Tier 1 - Now receives access token
       case 'kyc1':
         return (
           <KYCTier1 
             userId={userId}
             onBack={() => setCurrentScreen('signup')}
             onNext={(token, applicantId) => {
-              // Save the access token from backend
               setAccessToken(token);
               console.log('Received access token:', token.substring(0, 30) + '...');
               console.log('Applicant ID:', applicantId);
-              // Move to Tier 2 (Sumsub SDK)
               setCurrentScreen('kyc2');
             }}
           />
         );
-      
-      // UPDATED: KYC Tier 2 - Launches Sumsub SDK
       case 'kyc2':
         return (
           <KYCTier2 
             accessToken={accessToken}
             onComplete={() => {
               console.log('Documents uploaded to Sumsub');
-              // Move to polling screen (wait for webhook)
               setCurrentScreen('kyc-polling');
             }}
             onError={(error) => {
               console.error('KYC Tier 2 error:', error);
               alert(error);
-              // Stay on same screen or go back
             }}
           />
         );
-      
-      // NEW: KYC Status Polling - Waits for backend webhook
       case 'kyc-polling':
         return (
           <KYCStatusPolling 
             userId={userId}
             onVerified={() => {
               console.log('✅ KYC Verified! User is Tier 2+');
-              // KYC complete, move to biometric setup
-              setCurrentScreen('biometric');
+              setCurrentScreen('home');
             }}
             onRejected={(reason) => {
               console.error('❌ KYC Rejected:', reason);
               alert(`Verification failed: ${reason}`);
-              // Go back to Tier 1 to retry
               setCurrentScreen('kyc1');
             }}
           />
         );
-      
-      case 'biometric':
-        return <BiometricLogin onNext={() => setCurrentScreen('home')} />;
-      
       case 'home':
         return <Home onNavigate={(screen) => setCurrentScreen(screen as Screen)} />;
-      
       case 'conversion':
         return <CurrencyConversion onBack={() => setCurrentScreen('home')} />;
-      
       case 'p2p':
         return <P2PTransfer onBack={() => setCurrentScreen('home')} />;
-      
       case 'campus':
         return <CampusPayments onBack={() => setCurrentScreen('home')} />;
-      
       case 'remittance':
         return <Remittance onBack={() => setCurrentScreen('home')} />;
-      
+      case 'admin-login':
+        return <AdminLogin onBack={() => setCurrentScreen('home')} onSuccess={() => setCurrentScreen('admin')} />;
       case 'admin':
         return <AdminPanel onBack={() => setCurrentScreen('home')} />;
-      
       case 'alerts':
         return <RateAlerts onBack={() => setCurrentScreen('home')} userId={userId} />;
-      
-      case 'analytics':
-        return <Analytics onBack={() => setCurrentScreen('home')} />;
-      
+      case 'createWallet':
+        return <CreateWallet onBack={() => setCurrentScreen('home')} onWalletCreated={() => setCurrentScreen('home')} />;
       case 'settings':
         return <Home onNavigate={(screen) => setCurrentScreen(screen as Screen)} />;
-      
       default:
         return <Welcome onNext={() => setCurrentScreen('signup')} />;
     }
@@ -176,13 +202,13 @@ export default function App() {
       userId,
       setUserId,
       theme, 
-      toggleTheme 
+      toggleTheme,
+      logout 
     }}>
       <div className="max-w-md mx-auto bg-white min-h-screen shadow-2xl">
         {renderScreen()}
         <Toaster position="top-center" />
         
-        {/* Development Navigation Helper */}
         {process.env.NODE_ENV === 'development' && (
           <div className="fixed bottom-4 right-4 bg-black/80 backdrop-blur-sm text-white p-4 rounded-xl shadow-lg max-w-xs z-50">
             <p className="text-xs mb-2 font-semibold">Dev Navigation</p>
@@ -192,15 +218,14 @@ export default function App() {
               <button onClick={() => setCurrentScreen('kyc1')} className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded transition">KYC 1</button>
               <button onClick={() => setCurrentScreen('kyc2')} className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded transition">KYC 2</button>
               <button onClick={() => setCurrentScreen('kyc-polling')} className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded transition">Polling</button>
-              <button onClick={() => setCurrentScreen('biometric')} className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded transition">Biometric</button>
-              <button onClick={() => setCurrentScreen('home')} className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded transition">Home</button>
+                            <button onClick={() => setCurrentScreen('home')} className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded transition">Home</button>
               <button onClick={() => setCurrentScreen('conversion')} className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded transition">Convert</button>
               <button onClick={() => setCurrentScreen('p2p')} className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded transition">P2P</button>
               <button onClick={() => setCurrentScreen('campus')} className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded transition">Campus</button>
               <button onClick={() => setCurrentScreen('remittance')} className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded transition">Remittance</button>
-              <button onClick={() => setCurrentScreen('admin')} className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded transition">Admin</button>
+              <button onClick={() => setCurrentScreen('admin-login')} className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded transition">Admin</button>
               <button onClick={() => setCurrentScreen('alerts')} className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded transition">Alerts</button>
-              <button onClick={() => setCurrentScreen('analytics')} className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded transition">Analytics</button>
+              <button onClick={() => setCurrentScreen('createWallet')} className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded transition">Create Wallet</button>
             </div>
             <div className="mt-2 pt-2 border-t border-white/20">
               <p className="text-xs opacity-60">Current: {currentScreen}</p>

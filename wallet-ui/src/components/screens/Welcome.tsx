@@ -4,23 +4,63 @@ import { ArrowRight, Wallet, Globe, Shield, Zap, CreditCard } from 'lucide-react
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { useAppContext } from '../../App';
+import { authApi } from '../../services/walletApi';
+import { toast } from 'sonner';
 
 interface WelcomeProps {
   onNext: () => void;
+  onNavigateToHome?: () => void;
 }
 
-export function Welcome({ onNext }: WelcomeProps) {
+export function Welcome({ onNext, onNavigateToHome }: WelcomeProps) {
   const [showSignIn, setShowSignIn] = useState(false);
-  const [signInData, setSignInData] = useState({ username: '', password: '' });
+  const [signInData, setSignInData] = useState({ studentId: '', password: '', role: 'STUDENT' });
+  const [isLoading, setIsLoading] = useState(false);
   const { setUserName, setUserPassword } = useAppContext();
 
-  const handleSignIn = () => {
-    if (signInData.username && signInData.password) {
-      setUserName(signInData.username);
+  const handleSignIn = async () => {
+    if (!signInData.studentId || !signInData.password) {
+      toast.error(`Please enter both ${signInData.role === 'ADMIN' ? 'admin ID' : 'student ID'} and password`);
+      return;
+    }
+
+    setIsLoading(true);
+    
+    try {
+      console.log('Sending login request with role:', signInData.role);
+      const response = await authApi.login(signInData.studentId, signInData.password, signInData.role);
+      console.log('Backend response role:', response.role);
+      
+      // Store token and user data
+      localStorage.setItem('authToken', response.token);
+      
+      const userData = {
+        id: response.userId,
+        email: response.email,
+        fullName: response.fullName,
+        role: response.role,
+        status: response.status,
+        kycStatus: response.kycStatus || 'NOT_STARTED'
+      };
+      
+      localStorage.setItem('user', JSON.stringify(userData));
+      
+      setUserName(response.fullName);
       setUserPassword(signInData.password);
+      toast.success('Login successful!');
       setShowSignIn(false);
-      onNext();
+      
+      // Navigate based on role
+      if (onNavigateToHome) {
+        onNavigateToHome(); // Let App.tsx handle the routing based on stored user data
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      toast.error(error instanceof Error ? error.message : 'Login failed');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -100,7 +140,7 @@ export function Welcome({ onNext }: WelcomeProps) {
                 <div className="flex-1">
                   <h3 className="text-white text-lg mb-1">Enterprise Security</h3>
                   <p className="text-indigo-200 text-sm leading-relaxed">
-                    256-bit encryption and biometric authentication keep your funds safe
+                    256-bit encryption and secure authentication keep your funds safe
                   </p>
                 </div>
               </div>
@@ -152,14 +192,15 @@ export function Welcome({ onNext }: WelcomeProps) {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="username">Username</Label>
+              <Label htmlFor="studentId">{signInData.role === 'ADMIN' ? 'Admin ID' : 'Student ID'}</Label>
               <Input
-                id="username"
+                id="studentId"
                 type="text"
-                placeholder="Enter your username"
-                value={signInData.username}
-                onChange={(e) => setSignInData({ ...signInData, username: e.target.value })}
+                placeholder={signInData.role === 'ADMIN' ? 'Enter your admin ID' : 'Enter your student ID'}
+                value={signInData.studentId}
+                onChange={(e) => setSignInData({ ...signInData, studentId: e.target.value })}
                 className="h-12 rounded-xl"
+                onKeyDown={(e) => e.key === 'Enter' && handleSignIn()}
               />
             </div>
             <div className="space-y-2">
@@ -173,11 +214,24 @@ export function Welcome({ onNext }: WelcomeProps) {
                 className="h-12 rounded-xl"
               />
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="signin-role">Role</Label>
+              <Select value={signInData.role} onValueChange={(value: string) => setSignInData({ ...signInData, role: value })}>
+                <SelectTrigger className="h-12 rounded-xl bg-gray-50">
+                  <SelectValue placeholder="Select your role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="STUDENT">Student</SelectItem>
+                  <SelectItem value="ADMIN">Admin</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <Button 
               onClick={handleSignIn}
+              disabled={isLoading}
               className="w-full h-12 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600"
             >
-              Sign In
+              {isLoading ? 'Signing In...' : 'Sign In'}
             </Button>
           </div>
         </DialogContent>
