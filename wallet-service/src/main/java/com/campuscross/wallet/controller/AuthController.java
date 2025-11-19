@@ -31,7 +31,8 @@ public class AuthController {
                     request.lastName(),
                     request.phoneNumber(),
                     request.studentId(),
-                    request.campusName()
+                    request.campusName(),
+                    request.role()
             );
             
             String token = jwtUtil.generateToken(user.getEmail(), user.getId(), user.getRole().toString());

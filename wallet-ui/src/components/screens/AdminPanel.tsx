@@ -74,9 +74,6 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
       {/* Header */}
       <div className="bg-[#263238] p-6 pb-8">
         <div className="flex items-center gap-3 mb-6">
-          <button onClick={onBack} className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center">
-            <ArrowLeft size={20} className="text-white" />
-          </button>
           <div>
             <h1 className="text-xl text-white">Admin Panel</h1>
             <p className="text-sm text-white/60">Administrative controls</p>

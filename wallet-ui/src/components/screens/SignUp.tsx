@@ -205,7 +205,7 @@ export function SignUp({ onBack, onNext, onAdminSuccess }: SignUpProps) {
                 <Input
                   id="studentId"
                   type="text"
-                  placeholder="Enter your student ID"
+                  placeholder={formData.role === 'ADMIN' ? 'Enter Your Admin ID' : 'Enter Your Student ID'}
                   className="pl-10 h-12 rounded-xl border-gray-200"
                   value={formData.studentId}
                   onChange={(e) => setFormData({ ...formData, studentId: e.target.value })}
