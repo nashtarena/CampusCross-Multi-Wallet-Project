@@ -14,6 +14,7 @@ public class KycSubmissionResponse {
     private UserKyc.KycTier tierCompleted;
     private UserKyc.KycStatus status;
     private Instant timestamp;
+    private String sumsubAccessToken; // For launching SDK;
 
     // For Tier 2 - Sumsub reference IDs
     private String sumsubApplicantId;
@@ -96,4 +97,13 @@ public class KycSubmissionResponse {
     public void setNextStep(String nextStep) {
         this.nextStep = nextStep;
     }
+
+    public String getSumsubAccessToken() {
+        return sumsubAccessToken;
+    }
+
+    public void setSumsubAccessToken(String sumsubAccessToken) {
+        this.sumsubAccessToken = sumsubAccessToken;
+    }
+
 }

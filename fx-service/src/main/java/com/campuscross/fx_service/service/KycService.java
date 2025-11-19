@@ -7,20 +7,20 @@ import com.campuscross.fx_service.model.UserKyc;
 import com.campuscross.fx_service.repository.UserKycRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
-import java.util.Optional;
 
 /**
  * KYC Service - Orchestrates the three-tier KYC process
  * 
  * Flow:
- * 1. Tier 1: Instant validation + sanctions check (< 1 second)
- * 2. Tier 2: Background Sumsub document verification (30s - 5min)
- * 3. Tier 3: Automatic AML/PEP screening after Tier 2 completes
+ * 1. Tier 1: Instant validation + sanctions check + Create Sumsub applicant (<
+ * 2 seconds)
+ * 2. User uploads documents via Sumsub SDK in mobile/web app
+ * 3. Tier 2: Sumsub webhook triggers when documents verified
+ * 4. Tier 3: Automatic AML/PEP screening after Tier 2 completes
  */
 @Service
 public class KycService {
@@ -32,30 +32,34 @@ public class KycService {
     private final OpenSanctionsService sanctionsService;
     private final KycAsyncProcessor asyncProcessor;
     private final SumsubWebhookHandler webhookHandler;
+    private final SumsubTokenService tokenService;
 
     public KycService(
             UserKycRepository kycRepository,
             SumsubClient sumsubClient,
             OpenSanctionsService sanctionsService,
             KycAsyncProcessor asyncProcessor,
-            SumsubWebhookHandler webhookHandler) {
+            SumsubWebhookHandler webhookHandler,
+            SumsubTokenService tokenService) {
         this.kycRepository = kycRepository;
         this.sumsubClient = sumsubClient;
         this.sanctionsService = sanctionsService;
         this.asyncProcessor = asyncProcessor;
         this.webhookHandler = webhookHandler;
+        this.tokenService = tokenService;
     }
 
     /**
-     * Process Tier 1 KYC - INSTANTANEOUS
+     * Process Tier 1 KYC - SYNCHRONOUS (2-3 seconds)
      * 
      * Steps:
      * 1. Save basic user information
      * 2. Run instant sanctions check (country-level)
-     * 3. Mark Tier 1 as complete
-     * 4. Trigger Tier 2 in background (non-blocking)
+     * 3. Create Sumsub applicant IMMEDIATELY (not async)
+     * 4. Generate SDK access token
+     * 5. Return token so mobile/web app can launch Sumsub SDK
      * 
-     * Returns immediately with success response
+     * Returns immediately with access token for SDK
      */
     @Transactional
     public KycSubmissionResponse processTier1(Tier1KycRequest request) {
@@ -98,24 +102,53 @@ public class KycService {
             userKyc.setKycStatus(UserKyc.KycStatus.PENDING);
             userKyc.setTier1CompletedAt(Instant.now());
             userKyc.setSubmittedAt(Instant.now());
-            userKyc.setVerificationMessage("Tier 1 complete. Document verification in progress.");
 
             userKyc = kycRepository.save(userKyc);
 
-            // Step 4: Trigger Tier 2 in background (non-blocking)
-            asyncProcessor.processTier2Async(userKyc.getId());
+            // CRITICAL CHANGE: Create Sumsub applicant SYNCHRONOUSLY
+            // This happens NOW, not in background
+            String levelName = request.getLevelName() != null
+                    ? request.getLevelName()
+                    : "basic-kyc-level";
 
-            log.info("Tier 1 completed instantly for userId: {}", request.getUserId());
+            log.info("Creating Sumsub applicant for userId: {}", request.getUserId());
 
-            // Return success immediately
+            SumsubApplicantResponse sumsubResponse = sumsubClient.createApplicant(
+                    String.valueOf(userKyc.getUserId()),
+                    userKyc.getFirstName(),
+                    userKyc.getLastName(),
+                    userKyc.getEmail(),
+                    levelName);
+
+            // Save Sumsub references
+            userKyc.setSumsubApplicantId(sumsubResponse.getId());
+            userKyc.setSumsubInspectionId(sumsubResponse.getInspectionId());
+            userKyc.setVerificationMessage("Ready for document upload");
+            kycRepository.save(userKyc);
+
+            log.info("Sumsub applicant created: {}", sumsubResponse.getId());
+
+            // Step 4: Generate access token for SDK
+            String accessToken = tokenService.generateAccessToken(
+                    String.valueOf(userKyc.getUserId()),
+                    levelName);
+
+            log.info("Tier 1 completed for userId: {}. Ready for document upload.",
+                    request.getUserId());
+
+            // Step 5: Return response with access token
             KycSubmissionResponse response = createResponse(
                     true,
-                    "Tier 1 KYC completed successfully. Document verification initiated.",
+                    "Tier 1 KYC completed. Please upload your documents.",
                     request.getUserId(),
                     UserKyc.KycTier.TIER_1,
                     UserKyc.KycStatus.PENDING);
 
-            response.setNextStep("Document verification in progress. You'll be notified when complete.");
+            // CRITICAL: Include access token and applicant ID
+            response.setSumsubAccessToken(accessToken);
+            response.setSumsubApplicantId(sumsubResponse.getId());
+            response.setNextStep("Upload your identity documents using the verification screen");
+
             return response;
 
         } catch (Exception e) {
@@ -144,14 +177,8 @@ public class KycService {
         log.info("Received Sumsub webhook");
 
         try {
-            // TODO: Verify webhook signature for security
-            // Parse webhook payload to extract applicant ID and status
-
-            // For now, this is a placeholder
-            // In production, parse JSON payload and extract:
-            // - applicantId
-            // - reviewStatus (approved/rejected)
-            // - reviewResult details
+            // Delegate to webhook handler
+            webhookHandler.processWebhook(payload, signature);
 
         } catch (Exception e) {
             log.error("Error processing Sumsub webhook: {}", e.getMessage(), e);
@@ -166,10 +193,8 @@ public class KycService {
         UserKyc userKyc = kycRepository.findByUserId(userId)
                 .orElseThrow(() -> new RuntimeException("KYC record not found"));
 
-        // Determine which tier to retry based on current status
-        if (userKyc.getKycTier() == UserKyc.KycTier.TIER_1) {
-            asyncProcessor.processTier2Async(userKyc.getId());
-        } else if (userKyc.getKycTier() == UserKyc.KycTier.TIER_2) {
+        // Only retry Tier 3 if Tier 2 is complete
+        if (userKyc.getKycTier() == UserKyc.KycTier.TIER_2) {
             asyncProcessor.processTier3Async(userKyc.getId());
         }
 
@@ -178,53 +203,7 @@ public class KycService {
     }
 
     /**
-     * Internal method: Process Tier 2 (called by async processor)
-     * This runs in background thread
-     */
-    @Transactional
-    public void processTier2Internal(Long kycId) {
-        log.info("Starting Tier 2 background processing for kycId: {}", kycId);
-
-        try {
-            UserKyc userKyc = kycRepository.findById(kycId)
-                    .orElseThrow(() -> new RuntimeException("KYC record not found"));
-
-            // Step 1: Create Sumsub applicant
-            SumsubApplicantResponse sumsubResponse = sumsubClient.createApplicant(
-                    String.valueOf(userKyc.getUserId()),
-                    userKyc.getFirstName(),
-                    userKyc.getLastName(),
-                    userKyc.getEmail(),
-                    "basic-kyc-level");
-
-            // Step 2: Save Sumsub reference
-            userKyc.setSumsubApplicantId(sumsubResponse.getId());
-            userKyc.setSumsubInspectionId(sumsubResponse.getInspectionId());
-            userKyc.setKycStatus(UserKyc.KycStatus.UNDER_REVIEW);
-            userKyc.setVerificationMessage("Documents submitted to Sumsub for verification");
-
-            kycRepository.save(userKyc);
-
-            log.info("Tier 2 initiated for userId: {}. Sumsub applicant ID: {}",
-                    userKyc.getUserId(), sumsubResponse.getId());
-
-            // Note: Actual document verification happens via Sumsub SDK on frontend
-            // Sumsub will call our webhook when verification completes
-
-        } catch (Exception e) {
-            log.error("Error in Tier 2 processing: {}", e.getMessage(), e);
-
-            UserKyc userKyc = kycRepository.findById(kycId).orElse(null);
-            if (userKyc != null) {
-                userKyc.setKycStatus(UserKyc.KycStatus.REJECTED);
-                userKyc.setRejectionReason("Tier 2 processing failed: " + e.getMessage());
-                kycRepository.save(userKyc);
-            }
-        }
-    }
-
-    /**
-     * Internal method: Process Tier 3 (called by async processor or webhook)
+     * Internal method: Process Tier 3 (called by webhook after Tier 2 approval)
      * Runs AML/PEP screening automatically after Tier 2 approval
      */
     @Transactional

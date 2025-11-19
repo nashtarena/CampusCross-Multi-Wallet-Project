@@ -1,30 +1,111 @@
-import React, { useState } from 'react';
-import { Button } from '../ui/button';
-import { Card } from '../ui/card';
-import { ArrowLeft, Upload, FileText, CheckCircle2, Camera } from 'lucide-react';
+import React, { useEffect, useRef } from 'react';
+import snsWebSdk from '@sumsub/websdk';
+import { Loader2 } from 'lucide-react';
 
 interface KYCTier2Props {
-  onBack: () => void;
-  onNext: () => void;
+  accessToken: string;
+  onComplete: () => void;
+  onError: (error: string) => void;
 }
 
-export function KYCTier2({ onBack, onNext }: KYCTier2Props) {
-  const [uploads, setUploads] = useState({
-    idDocument: false,
-    proofOfAddress: false,
-    selfie: false
-  });
+/**
+ * KYC Tier 2 - Document Verification
+ * Uses Sumsub Web SDK
+ * Works on: Desktop browsers, Mobile browsers (iOS Safari, Chrome, etc.)
+ */
+export function KYCTier2({ accessToken, onComplete, onError }: KYCTier2Props) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const sdkInstanceRef = useRef<any>(null);
+
+  useEffect(() => {
+    if (!containerRef.current) {
+      console.error('Container ref is null');
+      return;
+    }
+
+    console.log('Initializing Sumsub Web SDK...');
+    console.log('Access token:', accessToken.substring(0, 30) + '...');
+
+    try {
+      const sdk = snsWebSdk
+        .init(
+          accessToken,
+          // Token refresh function (called if token expires)
+          () => {
+            console.log('Token refresh requested');
+            return Promise.resolve(accessToken);
+          }
+        )
+        .withConf({
+          lang: 'en',
+          theme: 'light',
+          // Mobile-optimized configuration
+          uiConf: {
+            customCssStr: `
+              :root {
+                --primary-color: #6366f1;
+                --secondary-color: #8b5cf6;
+              }
+              /* Mobile-friendly adjustments */
+              @media (max-width: 768px) {
+                .step-content {
+                  padding: 16px !important;
+                }
+              }
+            `
+          }
+        })
+        // Event: When user completes document upload
+        .on('idCheck.onApplicantSubmitted', (payload) => {
+          console.log('✅ Documents submitted successfully:', payload);
+          onComplete();
+        })
+        // Event: When there's an error
+        .on('idCheck.onError', (error) => {
+          console.error('❌ Sumsub error:', error);
+          onError('Document upload failed. Please try again.');
+        })
+        // Event: When applicant is loaded
+        .on('idCheck.onApplicantLoaded', (payload) => {
+          console.log('Applicant loaded:', payload);
+        })
+        // Event: When a step is completed
+        .on('idCheck.onStepCompleted', (payload) => {
+          console.log('Step completed:', payload);
+        })
+        .build();
+
+      // Launch the SDK
+      sdk.launch(containerRef.current);
+      sdkInstanceRef.current = sdk;
+
+      console.log('✅ Sumsub SDK launched successfully');
+
+    } catch (error) {
+      console.error('Failed to initialize Sumsub SDK:', error);
+      onError('Failed to launch verification. Please try again.');
+    }
+
+    // Cleanup function
+    return () => {
+      if (sdkInstanceRef.current) {
+        try {
+          sdkInstanceRef.current.destroy();
+          console.log('SDK destroyed');
+        } catch (error) {
+          console.error('Error destroying SDK:', error);
+        }
+      }
+    };
+  }, [accessToken, onComplete, onError]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex flex-col">
       {/* Header */}
-      <div className="p-6 flex items-center gap-3">
-        <button onClick={onBack} className="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center">
-          <ArrowLeft size={20} className="text-gray-700" />
-        </button>
+      <div className="p-6">
         <div>
-          <h1 className="text-xl text-gray-900">KYC Verification - Tier 2</h1>
-          <p className="text-sm text-gray-600">Document verification</p>
+          <h1 className="text-xl text-gray-900">Document Verification</h1>
+          <p className="text-sm text-gray-600">Upload your identity documents</p>
         </div>
       </div>
 
@@ -38,113 +119,35 @@ export function KYCTier2({ onBack, onNext }: KYCTier2Props) {
         <p className="text-xs text-gray-600 mt-2">Step 2 of 3</p>
       </div>
 
-      {/* Info Card */}
-      <div className="px-6 mb-4">
-        <Card className="p-4 bg-purple-50 border-purple-200">
-          <div className="flex gap-3">
-            <FileText className="text-purple-600 flex-shrink-0" size={20} />
-            <div>
-              <p className="text-sm text-purple-900 mb-1">Tier 2 Benefits</p>
-              <ul className="text-xs text-purple-700 space-y-1">
-                <li className="flex items-center gap-2">
-                  <CheckCircle2 size={12} />
-                  <span>Daily limit: $5,000</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle2 size={12} />
-                  <span>International remittance</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle2 size={12} />
-                  <span>Priority support</span>
-                </li>
-              </ul>
-            </div>
-          </div>
-        </Card>
-      </div>
-
-      {/* Upload Cards */}
-      <div className="flex-1 px-6 overflow-auto space-y-4">
-        <Card className="p-6 bg-white shadow-lg border-0">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center">
-                <FileText className="text-indigo-600" size={20} />
-              </div>
-              <div>
-                <p className="text-gray-900">ID Document</p>
-                <p className="text-xs text-gray-600">Passport or Driver's License</p>
-              </div>
-            </div>
-            {uploads.idDocument && <CheckCircle2 className="text-green-500" size={20} />}
-          </div>
-          <Button 
-            variant="outline" 
-            className="w-full rounded-xl h-11 border-dashed"
-            onClick={() => setUploads({ ...uploads, idDocument: true })}
-          >
-            <Upload size={16} className="mr-2" />
-            {uploads.idDocument ? 'Uploaded' : 'Upload Document'}
-          </Button>
-        </Card>
-
-        <Card className="p-6 bg-white shadow-lg border-0">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
-                <FileText className="text-purple-600" size={20} />
-              </div>
-              <div>
-                <p className="text-gray-900">Proof of Address</p>
-                <p className="text-xs text-gray-600">Utility bill or Bank statement</p>
-              </div>
-            </div>
-            {uploads.proofOfAddress && <CheckCircle2 className="text-green-500" size={20} />}
-          </div>
-          <Button 
-            variant="outline" 
-            className="w-full rounded-xl h-11 border-dashed"
-            onClick={() => setUploads({ ...uploads, proofOfAddress: true })}
-          >
-            <Upload size={16} className="mr-2" />
-            {uploads.proofOfAddress ? 'Uploaded' : 'Upload Document'}
-          </Button>
-        </Card>
-
-        <Card className="p-6 bg-white shadow-lg border-0">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-                <Camera className="text-blue-600" size={20} />
-              </div>
-              <div>
-                <p className="text-gray-900">Selfie Verification</p>
-                <p className="text-xs text-gray-600">Photo holding your ID</p>
-              </div>
-            </div>
-            {uploads.selfie && <CheckCircle2 className="text-green-500" size={20} />}
-          </div>
-          <Button 
-            variant="outline" 
-            className="w-full rounded-xl h-11 border-dashed"
-            onClick={() => setUploads({ ...uploads, selfie: true })}
-          >
-            <Camera size={16} className="mr-2" />
-            {uploads.selfie ? 'Captured' : 'Take Selfie'}
-          </Button>
-        </Card>
-      </div>
-
-      {/* Bottom Button */}
-      <div className="p-6">
-        <Button 
-          onClick={onNext}
-          className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl h-12"
+      {/* SDK Container */}
+      <div className="flex-1 px-6 pb-6 overflow-auto">
+        <div 
+          ref={containerRef}
+          className="bg-white rounded-lg shadow-lg w-full mx-auto"
+          style={{ 
+            minHeight: '600px',
+            maxWidth: '900px' // Looks good on desktop
+          }}
         >
-          Submit for Review
-        </Button>
+          {/* Loading indicator - shows briefly while SDK initializes */}
+          <div className="flex flex-col items-center justify-center h-full p-8">
+            <Loader2 className="animate-spin text-indigo-600 mb-4" size={40} />
+            <p className="text-gray-600 text-center">Loading verification...</p>
+            <p className="text-sm text-gray-500 text-center mt-2">
+              This may take a few seconds
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile hint */}
+      <div className="px-6 pb-4">
+        <p className="text-xs text-gray-500 text-center">
+          📱 On mobile? You can use your camera to scan documents
+        </p>
       </div>
     </div>
   );
 }
+
+export default KYCTier2;

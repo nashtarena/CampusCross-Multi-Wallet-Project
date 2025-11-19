@@ -8,6 +8,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.*;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
+import com.campuscross.fx_service.dto.airwallex.AirwallexPayoutRequest;
+import com.campuscross.fx_service.dto.airwallex.AirwallexPayoutResponse;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -134,5 +136,115 @@ public class AirwallexClient {
     public boolean isConfigured() {
         return config.getClientId() != null && !config.getClientId().isEmpty()
                 && config.getApiKey() != null && !config.getApiKey().isEmpty();
+    }
+
+    /**
+     * Create a payout (bank transfer) via Airwallex
+     */
+    public AirwallexPayoutResponse createPayout(AirwallexPayoutRequest payoutRequest) {
+
+        ensureAuthenticated();
+
+        String url = config.getApiUrl() + "/api/v1/transfers";
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(accessToken);
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<AirwallexPayoutRequest> request = new HttpEntity<>(payoutRequest, headers);
+
+        try {
+            ResponseEntity<AirwallexPayoutResponse> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.POST,
+                    request,
+                    AirwallexPayoutResponse.class);
+
+            if (response.getBody() == null) {
+                throw new RuntimeException("Empty payout response from Airwallex");
+            }
+
+            log.info("Airwallex payout created: ID={}, Status={}",
+                    response.getBody().getId(),
+                    response.getBody().getStatus());
+
+            return response.getBody();
+
+        } catch (Exception e) {
+            log.error("Airwallex payout creation failed: {}", e.getMessage(), e);
+            throw new RuntimeException("Failed to create payout via Airwallex", e);
+        }
+    }
+
+    /**
+     * Get payout status by Airwallex payout ID
+     */
+    public AirwallexPayoutResponse getPayoutStatus(String payoutId) {
+
+        ensureAuthenticated();
+
+        String url = String.format("%s/api/v1/payouts/%s", config.getApiUrl(), payoutId);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(accessToken);
+
+        HttpEntity<Void> request = new HttpEntity<>(headers);
+
+        try {
+            ResponseEntity<AirwallexPayoutResponse> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.GET,
+                    request,
+                    AirwallexPayoutResponse.class);
+
+            if (response.getBody() == null) {
+                throw new RuntimeException("Empty status response from Airwallex");
+            }
+
+            log.debug("Airwallex payout status: ID={}, Status={}",
+                    payoutId,
+                    response.getBody().getStatus());
+
+            return response.getBody();
+
+        } catch (Exception e) {
+            log.error("Failed to get payout status: {}", e.getMessage(), e);
+            throw new RuntimeException("Failed to retrieve payout status", e);
+        }
+    }
+
+    /**
+     * Cancel a pending payout
+     */
+    public boolean cancelPayout(String payoutId) {
+
+        ensureAuthenticated();
+
+        String url = String.format("%s/api/v1/payouts/%s/cancel", config.getApiUrl(), payoutId);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(accessToken);
+
+        HttpEntity<Void> request = new HttpEntity<>(headers);
+
+        try {
+            ResponseEntity<String> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.POST,
+                    request,
+                    String.class);
+
+            boolean success = response.getStatusCode().is2xxSuccessful();
+
+            if (success) {
+                log.info("Airwallex payout cancelled: ID={}", payoutId);
+            }
+
+            return success;
+
+        } catch (Exception e) {
+            log.error("Failed to cancel payout: {}", e.getMessage(), e);
+            return false;
+        }
     }
 }

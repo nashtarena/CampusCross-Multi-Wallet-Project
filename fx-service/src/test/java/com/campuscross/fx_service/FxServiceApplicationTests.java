@@ -9,9 +9,13 @@ import com.campuscross.fx_service.service.*;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
+import com.campuscross.fx_service.repository.RemittanceRepository;
+import com.campuscross.fx_service.controller.RemittanceController;
 
 @SpringBootTest
+@ActiveProfiles("test")
 @TestPropertySource(properties = {
 		"airwallex.enabled=false",
 		"airwallex.api-url=http://localhost",
@@ -53,6 +57,9 @@ class FxServiceApplicationTests {
 	// Mock ALL external clients
 	@MockBean
 	private SumsubClient sumsubClient;
+
+	@MockBean
+	private RemittanceStatusTracker remittanceStatusTracker;
 
 	@Test
 	void contextLoads() {

@@ -15,7 +15,7 @@ interface BackendAlert {
   currencyPair: string; // e.g., "USD/EUR"
   thresholdValue: number;
   direction: 'ABOVE' | 'BELOW';
-  status: 'ACTIVE' | 'INACTIVE';
+  status: 'ACTIVE' | 'INACTIVE'| 'TRIGGERED';
   createdAt?: string;
 }
 
@@ -28,6 +28,7 @@ interface FrontendAlert {
   rate: number;
   currentRate: number;
   active: boolean;
+  status: 'ACTIVE' | 'INACTIVE'| 'TRIGGERED';
 }
 
 interface RateAlertsProps {
@@ -116,7 +117,8 @@ const transformBackendToFrontend = (
     direction: backendAlert.direction,
     rate: backendAlert.thresholdValue,
     currentRate,
-    active: backendAlert.status === 'ACTIVE',
+    active: backendAlert.status === 'ACTIVE', // Only ACTIVE alerts are considered active
+    status: backendAlert.status, // Pass through the actual status from backend
   };
 };
 
@@ -445,12 +447,29 @@ export function RateAlerts({ onBack, userId = 1 }: RateAlertsProps) {
                       <p className="text-gray-900">
                         {alert.from}/{alert.to}
                       </p>
-                      <Badge 
-                        variant={alert.active ? 'default' : 'secondary'}
-                        className={alert.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}
-                      >
-                        {alert.active ? 'Active' : 'Inactive'}
-                      </Badge>
+                      {(() => {
+                        const isTriggered = alert.currentRate > 0 && (
+                          (alert.direction === 'ABOVE' && alert.currentRate > alert.rate) ||
+                          (alert.direction === 'BELOW' && alert.currentRate < alert.rate)
+                        );
+                        
+                        if (isTriggered) {
+                          return (
+                            <Badge className="bg-orange-100 text-orange-700">
+                              Triggered
+                            </Badge>
+                          );
+                        }
+                        
+                        return (
+                          <Badge 
+                            variant={alert.active ? 'default' : 'secondary'}
+                            className={alert.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}
+                          >
+                            {alert.active ? 'Active' : 'Inactive'}
+                          </Badge>
+                        );
+                      })()}
                     </div>
                     <p className="text-sm text-gray-600">
                       Alert when rate goes {alert.direction.toLowerCase()} {alert.rate.toFixed(4)}

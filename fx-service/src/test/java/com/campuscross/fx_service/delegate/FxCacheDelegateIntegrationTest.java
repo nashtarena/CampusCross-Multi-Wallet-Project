@@ -3,7 +3,9 @@ package com.campuscross.fx_service.delegate;
 import com.campuscross.fx_service.client.SumsubClient;
 import com.campuscross.fx_service.controller.KycController;
 import com.campuscross.fx_service.controller.RateAlertController;
+import com.campuscross.fx_service.controller.RemittanceController;
 import com.campuscross.fx_service.repository.RateAlertRepository;
+import com.campuscross.fx_service.repository.RemittanceRepository;
 import com.campuscross.fx_service.repository.UserKycRepository;
 import com.campuscross.fx_service.service.*;
 import org.junit.jupiter.api.BeforeEach;
@@ -16,6 +18,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 
 import java.math.BigDecimal;
@@ -23,7 +26,8 @@ import java.util.Optional;
 
 import static org.mockito.Mockito.*;
 
-@SpringBootTest
+@SpringBootTest(classes = FxCacheDelegateIntegrationTest.TestConfig.class)
+@ActiveProfiles("test")
 @TestPropertySource(properties = {
         "spring.task.scheduling.enabled=false",
         "spring.task.execution.enabled=false",
@@ -77,6 +81,15 @@ public class FxCacheDelegateIntegrationTest {
     // Mock ALL external clients
     @MockBean
     private SumsubClient sumsubClient;
+
+    @MockBean
+    private RemittanceRepository remittanceRepository;
+
+    @MockBean
+    private RemittanceService remittanceService;
+
+    @MockBean
+    private RemittanceController remittanceController;
 
     @BeforeEach
     void setUp() {

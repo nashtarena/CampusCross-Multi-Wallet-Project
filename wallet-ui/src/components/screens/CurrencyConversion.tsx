@@ -167,38 +167,6 @@ export function CurrencyConversion({ onBack }: CurrencyConversionProps) {
       </div>
 
       {/* Live Rates */}
-      <div className="px-6 pb-6">
-        <h3 className="text-gray-900 mb-3">Live Exchange Rates</h3>
-        <div className="space-y-3">
-          {rates.map((rateItem, index) => (
-            <Card key={index} className="p-4 border-0 shadow-md">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-900">
-                    {rateItem.from}/{rateItem.to}
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    1 {rateItem.from} = {rateItem.rate} {rateItem.to}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  {rateItem.change > 0 ? (
-                    <>
-                      <TrendingUp className="text-green-500" size={16} />
-                      <span className="text-sm text-green-500">+{rateItem.change}%</span>
-                    </>
-                  ) : (
-                    <>
-                      <TrendingDown className="text-red-500" size={16} />
-                      <span className="text-sm text-red-500">{rateItem.change}%</span>
-                    </>
-                  )}
-                </div>
-              </div>
-            </Card>
-          ))}
-        </div>
-      </div>
     </div>
   );
 }
