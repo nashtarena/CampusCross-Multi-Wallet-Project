@@ -1,4 +1,4 @@
-const WALLET_API_BASE_URL = import.meta.env.VITE_WALLET_API_URL || 'http://localhost:8080/api';
+const WALLET_API_BASE_URL = import.meta.env.VITE_WALLET_API_URL || 'http://localhost:8085/api';
 
 // Helper function to get headers with JWT token
 const getAuthHeaders = () => {
@@ -262,6 +262,25 @@ deleteWallet: async (walletId: number): Promise<void> => {
     if (!response.ok) {
       const errorText = await response.text();
       throw new Error(`Failed to add funds: ${errorText}`);
+    }
+
+    return response.json();
+  },
+
+  /**
+   * Call the simulated banking deposit endpoint so a transaction record is created
+   * and funds are added to the user's default wallet via backend BankingService.
+   */
+  depositFromBank: async (userId: string | number, amount: number, currency: string): Promise<any> => {
+    const response = await fetch(`${WALLET_API_BASE_URL}/banking/deposit`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ userId: String(userId), amount, currency }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to deposit from bank: ${errorText}`);
     }
 
     return response.json();

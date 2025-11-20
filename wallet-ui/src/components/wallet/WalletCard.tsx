@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import { Card } from '../ui/card';
 import { ArrowUpRight, ArrowDownLeft, Eye, EyeOff, Trash2 } from 'lucide-react';
 import { Button } from '../ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
+import { Input } from '../ui/input';
+import { Label } from '../ui/label';
 import { toast } from 'sonner';
 import { walletApi } from '../../services/walletApi';
 import { Wallet } from '../../services/walletApi';
@@ -10,11 +13,16 @@ interface WalletCardProps {
   wallet: Wallet;
   isBalanceHidden?: boolean;
   onDelete?: () => void;
+  onNavigate?: (screen: string) => void;
+  onWalletUpdated?: () => void;
 }
 
-export function WalletCard({ wallet, isBalanceHidden = false, onDelete }: WalletCardProps) {
+export function WalletCard({ wallet, isBalanceHidden = false, onDelete, onNavigate, onWalletUpdated }: WalletCardProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isTransferring, setIsTransferring] = useState(false);
+  const [showReceiveDialog, setShowReceiveDialog] = useState(false);
+  const [receiveAmount, setReceiveAmount] = useState<string>('');
+  const [transactionResult, setTransactionResult] = useState<any | null>(null);
 
   const getCurrencySymbol = (currency: string) => {
     const symbols: { [key: string]: string } = {
@@ -72,10 +80,12 @@ export function WalletCard({ wallet, isBalanceHidden = false, onDelete }: Wallet
     console.log('Transferring funds:', amount, 'to wallet:', wallet.id);
     setIsTransferring(true);
     try {
-      await walletApi.addFunds(wallet.id, amount, wallet.currencyCode);
+      // Use the banking deposit endpoint so the backend records a Transaction
+      // and adds funds to the user's wallet for the specified currency.
+      await walletApi.depositFromBank(wallet.userId ?? (wallet as any).userId, amount, wallet.currencyCode);
       toast.success(`Successfully added ${getCurrencySymbol(wallet.currencyCode)}${amount.toFixed(2)} to wallet`);
-      // Refresh the wallet data by calling the parent's refresh if available
-      window.location.reload();
+      // Notify parent to refresh wallet list/state if provided
+      if (onWalletUpdated) onWalletUpdated();
     } catch (error: any) {
       console.error('Transfer error:', error);
       toast.error(error.message || 'Failed to transfer funds');
@@ -131,14 +141,7 @@ export function WalletCard({ wallet, isBalanceHidden = false, onDelete }: Wallet
             </button>
             <button 
               className="flex-1 bg-white/20 backdrop-blur-sm hover:bg-white/30 transition-colors rounded-lg py-2 px-3 flex items-center justify-center gap-2"
-              onClick={() => {
-                const amount = prompt(`Enter amount to add to ${wallet.currencyCode} wallet:`);
-                if (amount && !isNaN(parseFloat(amount)) && parseFloat(amount) > 0) {
-                  handleTransfer(parseFloat(amount));
-                } else if (amount) {
-                  toast.error('Please enter a valid amount');
-                }
-              }}
+              onClick={() => setShowReceiveDialog(true)}
               disabled={isTransferring}
             >
               <ArrowDownLeft size={16} />
@@ -146,8 +149,70 @@ export function WalletCard({ wallet, isBalanceHidden = false, onDelete }: Wallet
             </button>
           </div>
         </div>
-      </Card>
+          </Card>
+
+          {/* Receive dialog instance */}
+          <ReceiveDialog
+            open={showReceiveDialog}
+            onOpenChange={setShowReceiveDialog}
+            wallet={wallet}
+            onDeposit={(result)=>{
+              setTransactionResult(result);
+              // Notify parent to refresh wallets
+              if (onWalletUpdated) onWalletUpdated();
+            }}
+          />
 
           </>
+  );
+}
+
+// Receive dialog rendered outside the card for clarity
+export function ReceiveDialog({ open, onOpenChange, wallet, onDeposit }: { open: boolean; onOpenChange: (v:boolean)=>void; wallet: Wallet; onDeposit?: (result:any)=>void }) {
+  const [amount, setAmount] = useState<string>('');
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async () => {
+    if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) {
+      toast.error('Please enter a valid amount');
+      return;
+    }
+    setLoading(true);
+    try {
+      const result = await walletApi.depositFromBank(wallet.userId ?? (wallet as any).userId, Number(amount), wallet.currencyCode);
+      toast.success('Deposit successful');
+      onDeposit?.(result);
+      onOpenChange(false);
+    } catch (err:any) {
+      console.error('Deposit error:', err);
+      toast.error(err?.message || 'Deposit failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Receive {wallet.currencyCode}</DialogTitle>
+          <DialogDescription>
+            Add funds to your {wallet.walletName || wallet.currencyCode} wallet via simulated bank deposit.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="py-2 space-y-4">
+          <div className="space-y-2">
+            <Label>Amount ({wallet.currencyCode})</Label>
+            <Input value={amount} onChange={(e)=>setAmount(e.target.value)} className="h-12" />
+          </div>
+
+          <div className="flex gap-2">
+            <Button onClick={handleSubmit} disabled={loading} className="flex-1">{loading ? 'Processing...' : 'Deposit'}</Button>
+            <Button variant="ghost" onClick={()=>onOpenChange(false)} className="flex-1">Cancel</Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }

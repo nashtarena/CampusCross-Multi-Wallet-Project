@@ -76,68 +76,60 @@ export function Home({ onNavigate }: HomeProps) {
     }
   }, []);
 
+  // Extracted fetch function so it can be called on-demand (e.g., after deposit)
+  const fetchUserData = async () => {
+    try {
+      setIsLoadingBalance(true);
+      setIsLoadingTransactions(true);
+
+      const userStr = localStorage.getItem('user');
+      if (!userStr) {
+        console.log('No user found in localStorage');
+        return;
+      }
+
+      const user = JSON.parse(userStr);
+
+      // Fetch user wallets
+      const userWallets = await walletApi.getUserWallets(user.id);
+      setWallets(userWallets);
+
+      // Calculate balances by currency
+      const balances: { [key: string]: number } = {};
+      userWallets.forEach(wallet => {
+        const currency = wallet.currencyCode || 'USD';
+        balances[currency] = (balances[currency] || 0) + wallet.balance;
+      });
+      setBalancesByCurrency(balances);
+      setIsLoadingBalance(false);
+
+      // Fetch recent transactions
+      const transactions = await transactionApi.getUserTransactions(user.id);
+
+      // Handle paginated response - extract the transactions array
+      let transactionsArray = [];
+      if (Array.isArray(transactions)) {
+        transactionsArray = transactions;
+      } else if (transactions && typeof transactions === 'object') {
+        if ('transactions' in transactions) {
+          transactionsArray = (transactions as any).transactions || [];
+        } else if ('content' in transactions) {
+          transactionsArray = (transactions as any).content || [];
+        }
+      }
+
+      setRecentTransactions(transactionsArray.slice(0, 5));
+    } catch (error: any) {
+      console.error('Failed to fetch user data:', error);
+      toast.error('Failed to fetch latest data');
+      setIsLoadingBalance(false);
+    } finally {
+      setIsLoadingTransactions(false);
+    }
+  };
+
   // Fetch user data and balances from API
   useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        setIsLoadingBalance(true);
-        setIsLoadingTransactions(true);
-        
-        const userStr = localStorage.getItem('user');
-        if (!userStr) {
-          console.log('No user found in localStorage');
-          return;
-        }
-
-        const user = JSON.parse(userStr);
-        
-        // Fetch user wallets
-        const userWallets = await walletApi.getUserWallets(user.id);
-        setWallets(userWallets);
-        
-        // Calculate balances by currency
-        const balances: { [key: string]: number } = {};
-        userWallets.forEach(wallet => {
-          const currency = wallet.currencyCode || 'USD';
-          balances[currency] = (balances[currency] || 0) + wallet.balance;
-        });
-        setBalancesByCurrency(balances);
-        setIsLoadingBalance(false);
-        
-        // Fetch total balance
-        // Note: We're now showing individual currency balances instead of total USD
-        
-        // Fetch recent transactions
-        const transactions = await transactionApi.getUserTransactions(user.id);
-        
-        // Handle paginated response - extract the transactions array
-        let transactionsArray = [];
-        if (Array.isArray(transactions)) {
-          transactionsArray = transactions;
-        } else if (transactions && typeof transactions === 'object') {
-          // Check for paginated response structure
-          if ('transactions' in transactions) {
-            transactionsArray = (transactions as any).transactions || [];
-          } else if ('content' in transactions) {
-            transactionsArray = (transactions as any).content || [];
-          }
-        }
-        
-        setRecentTransactions(transactionsArray.slice(0, 5)); // Show only last 5 transactions
-        
-      } catch (error: any) {
-        console.error('Failed to fetch user data:', error);
-        console.error('Error details:', error.message);
-        if (error.stack) {
-          console.error('Error stack:', error.stack);
-        }
-        toast.error('Failed to fetch latest data');
-        setIsLoadingBalance(false);
-      } finally {
-        setIsLoadingTransactions(false);
-      }
-    };
-
     fetchUserData();
   }, []);
 
@@ -392,6 +384,8 @@ export function Home({ onNavigate }: HomeProps) {
                   setWallets(prev => prev.filter(w => w.id !== wallet.id));
                   toast.success('Wallet deleted successfully');
                 }}
+                  onNavigate={onNavigate}
+                  onWalletUpdated={fetchUserData}
               />
             ))
           ) : (
