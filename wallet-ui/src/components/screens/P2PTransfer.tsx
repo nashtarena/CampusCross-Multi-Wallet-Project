@@ -1,74 +1,93 @@
-import React, { useState, useEffect } from 'react';
-import { Button } from '../ui/button';
-import { Card } from '../ui/card';
-import { Input } from '../ui/input';
-import { Label } from '../ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
-import { ArrowLeft, Send, Search, Clock, CheckCircle2, Wallet } from 'lucide-react';
-import { Avatar, AvatarFallback } from '../ui/avatar';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
-import { toast } from 'sonner';
-import { useAppContext } from '../../App';
-import { walletApi, transactionApi } from '../../services/walletApi';
-import { Wallet as WalletType, Transaction } from '../../services/walletApi';
+import React, { useState, useEffect } from "react";
+import { Button } from "../ui/button";
+import { Card } from "../ui/card";
+import { Input } from "../ui/input";
+import { Label } from "../ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
+import {
+  ArrowLeft,
+  Send,
+  Search,
+  Clock,
+  CheckCircle2,
+  Wallet,
+} from "lucide-react";
+import { Avatar, AvatarFallback } from "../ui/avatar";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "../ui/dialog";
+import { toast } from "sonner";
+import { useAppContext } from "../../App";
+import { walletApi, transactionApi } from "../../services/walletApi";
+import { Wallet as WalletType, Transaction } from "../../services/walletApi";
 
 interface P2PTransferProps {
   onBack: () => void;
 }
 
 const recentContacts = [
-  { id: 1, name: 'Sarah Johnson', studentId: 'STU123456', avatar: 'SJ' },
-  { id: 2, name: 'Michael Chen', studentId: 'STU789012', avatar: 'MC' },
-  { id: 3, name: 'Emma Davis', studentId: 'STU345678', avatar: 'ED' }
-];
-
-const transactionHistory = [
-  { id: 1, name: 'Sarah Johnson', amount: 50, currency: 'USD', date: '2024-11-09', status: 'completed' },
-  { id: 2, name: 'Michael Chen', amount: -75, currency: 'EUR', date: '2024-11-08', status: 'completed' },
-  { id: 3, name: 'Emma Davis', amount: 100, currency: 'GBP', date: '2024-11-07', status: 'pending' }
+  { id: 1, name: "Sarah Johnson", studentId: "STU123456", avatar: "SJ" },
+  { id: 2, name: "Michael Chen", studentId: "STU789012", avatar: "MC" },
+  { id: 3, name: "Emma Davis", studentId: "STU345678", avatar: "ED" },
 ];
 
 export function P2PTransfer({ onBack }: P2PTransferProps) {
   const [selectedWallet, setSelectedWallet] = useState<WalletType | null>(null);
-  const [selectedCurrency, setSelectedCurrency] = useState('USD');
-  const [amount, setAmount] = useState('');
-  const [recipient, setRecipient] = useState('');
-  const [note, setNote] = useState('');
-  const [activeTab, setActiveTab] = useState('send');
+  const [selectedCurrency, setSelectedCurrency] = useState("USD");
+  const [amount, setAmount] = useState("");
+  const [recipient, setRecipient] = useState("");
+  const [note, setNote] = useState("");
+  const [activeTab, setActiveTab] = useState("send");
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [wallets, setWallets] = useState<WalletType[]>([]);
   const [isLoadingWallets, setIsLoadingWallets] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
+  const [recentTransactions, setRecentTransactions] = useState<Transaction[]>(
+    []
+  );
   const [isLoadingTransactions, setIsLoadingTransactions] = useState(false);
   const { theme } = useAppContext();
+  const [allWalletsBackup, setAllWalletsBackup] = useState<WalletType[] | null>(
+    null
+  );
 
   useEffect(() => {
     const fetchWallets = async () => {
       try {
         setIsLoadingWallets(true);
-        const userStr = localStorage.getItem('user');
+        const userStr = localStorage.getItem("user");
         if (!userStr) {
-          toast.error('User not found');
+          toast.error("User not found");
           return;
         }
 
         const user = JSON.parse(userStr);
         const userWallets = await walletApi.getUserWallets(user.id);
-        
-        // Filter out frozen and closed wallets
-        const activeWallets = userWallets.filter(w => !w.isFrozen && !w.isClosed);
+
+        const activeWallets = userWallets.filter(
+          (w) => !w.isFrozen && !w.isClosed
+        );
         setWallets(activeWallets);
-        
-        // Auto-select the first wallet if available
+        setAllWalletsBackup(activeWallets);
+
         if (activeWallets.length > 0) {
           setSelectedWallet(activeWallets[0]);
           setSelectedCurrency(activeWallets[0].currency);
         }
       } catch (error) {
-        console.error('Failed to fetch wallets:', error);
-        toast.error('Failed to load wallets');
+        console.error("Failed to fetch wallets:", error);
+        //toast.error("Failed to load wallets");
       } finally {
         setIsLoadingWallets(false);
       }
@@ -81,20 +100,24 @@ export function P2PTransfer({ onBack }: P2PTransferProps) {
     const fetchTransactions = async () => {
       try {
         setIsLoadingTransactions(true);
-        const userStr = localStorage.getItem('user');
+
+        const userStr = localStorage.getItem("user");
         if (!userStr) return;
 
         const user = JSON.parse(userStr);
         const transactions = await transactionApi.getUserTransactions(user.id);
-        
-        // Handle paginated response - extract the transactions array
-        const transactionsArray = Array.isArray(transactions) ? transactions : ((transactions as any)?.transactions || []);
-        
-        // Filter only P2P transfer transactions
-        const p2pTransactions = transactionsArray.filter((tx: any) => tx.type === 'P2P_TRANSFER');
-        setRecentTransactions(p2pTransactions.slice(0, 10)); // Show last 10 transactions
+
+        /** FIX APPLIED — use raw array directly */
+        const transactionsArray = Array.isArray(transactions)
+          ? transactions
+          : [];
+
+        const p2pTransactions = transactionsArray.filter(
+          (tx: any) => tx.type === "P2P_TRANSFER"
+        );
+        setRecentTransactions(p2pTransactions.slice(0, 10));
       } catch (error) {
-        console.error('Failed to fetch transactions:', error);
+        //console.error("Failed to fetch transactions:", error);
       } finally {
         setIsLoadingTransactions(false);
       }
@@ -103,81 +126,158 @@ export function P2PTransfer({ onBack }: P2PTransferProps) {
     fetchTransactions();
   }, []);
 
-  const handleSendMoney = () => {
+  const filterWalletsForRecipient = async (identifier: string) => {
+    if (!identifier || identifier.trim() === "") {
+      // restore full list if we have backup
+      if (allWalletsBackup) setWallets(allWalletsBackup);
+      return;
+    }
+
+    try {
+      const info = await transactionApi.getRecipientInfo(identifier.trim());
+      // Expected response shape: { role: 'MERCHANT'|'USER', businessCurrencyCode?: 'USD' }
+      if (info?.role === "MERCHANT") {
+        const merchantCurrency =
+          info.businessCurrencyCode ||
+          info.businessCurrency ||
+          info.businessCurrencyCode?.toUpperCase();
+
+        // prefer matching on wallet.currency or wallet.currencyCode fields depending on your model
+        const filtered = (allWalletsBackup || wallets).filter(
+          (w) =>
+            (w.currency &&
+              w.currency.toUpperCase() === merchantCurrency?.toUpperCase()) ||
+            (w.currencyCode &&
+              w.currencyCode.toUpperCase() === merchantCurrency?.toUpperCase())
+        );
+
+        if (filtered.length === 0) {
+          // no compatible wallets; show toast and keep full list (user can't pay until they create matching wallet)
+          toast.error(
+            `No wallets with currency ${merchantCurrency} available for this merchant.`
+          );
+          // optionally set wallets to empty to force user to create wallet – here we leave full list
+          setWallets(allWalletsBackup || wallets);
+          // clear selection so user notices
+          setSelectedWallet(null);
+          return;
+        }
+
+        // limit wallet choices to compatible ones
+        setWallets(filtered);
+
+        // if current selectedWallet doesn't match, pick first compatible
+        if (
+          !selectedWallet ||
+          !filtered.find((f) => f.id === selectedWallet.id)
+        ) {
+          setSelectedWallet(filtered[0]);
+          setSelectedCurrency(filtered[0].currency || filtered[0].currencyCode);
+        }
+      } else {
+        // Non-merchant: restore full list
+        if (allWalletsBackup) setWallets(allWalletsBackup);
+      }
+    } catch (err) {
+      console.error("Failed to lookup recipient for wallet filtering:", err);
+      // on error restore list
+      if (allWalletsBackup) setWallets(allWalletsBackup);
+    }
+  };
+
+  const handleSendMoney = async () => {
     if (!selectedWallet) {
-      toast.error('Please select a wallet');
+      toast.error("Please select a wallet");
       return;
     }
     if (!recipient) {
-      toast.error('Please enter a recipient');
+      toast.error("Please enter a recipient");
       return;
     }
     if (!amount || parseFloat(amount) <= 0) {
-      toast.error('Please enter a valid amount');
+      toast.error("Please enter a valid amount");
       return;
     }
     if (parseFloat(amount) > selectedWallet.balance) {
-      toast.error('Insufficient balance');
+      toast.error("Insufficient balance");
       return;
     }
+    /** Merchant currency restriction */
+    try {
+      const userInfo = await transactionApi.getRecipientInfo(recipient.trim());
+      if (userInfo?.role === "MERCHANT") {
+        const merchantCurrency = userInfo.businessCurrencyCode;
+
+        const walletCurrency = (
+          selectedWallet.currency || selectedWallet.currencyCode
+        )?.toUpperCase();
+        const merchantCurr = merchantCurrency?.toUpperCase();
+
+        if (walletCurrency !== merchantCurr) {
+          toast.error(
+            `This merchant only accepts payments in ${merchantCurr}. Choose a wallet with matching currency.`
+          );
+          return;
+        }
+      }
+    } catch (err) {
+      console.error("Failed to validate merchant currency", err);
+    }
+
     setShowConfirmation(true);
   };
 
   const confirmTransfer = async () => {
     if (!selectedWallet) return;
-    
+
     try {
       setIsProcessing(true);
-      
-      console.log('=== P2P Transfer Debug ===');
-      console.log('Selected wallet:', selectedWallet);
-      console.log('Selected wallet ID:', selectedWallet.id);
-      console.log('Recipient (raw):', recipient);
-      console.log('Recipient (trimmed):', recipient?.trim());
-      console.log('Recipient (uppercase):', recipient?.trim()?.toUpperCase());
-      console.log('Amount:', amount);
-      
+
       const transferData = {
         sourceWalletId: selectedWallet.id,
-        recipientIdentifier: recipient?.trim(), // Can be student ID (STU...) or phone number
+        recipientIdentifier: recipient?.trim(),
         amount: parseFloat(amount),
-        description: note || `P2P transfer to ${recipient}`
+        description: note || `P2P transfer to ${recipient}`,
       };
-      
-      console.log('Transfer data to send:', JSON.stringify(transferData, null, 2));
-      
-      const transaction = await transactionApi.p2pTransfer(transferData);
-      
-      toast.success(`Successfully sent ${amount} ${selectedCurrency} to ${recipient}`);
+
+      await transactionApi.p2pTransfer(transferData);
+
+      toast.success(
+        `Successfully sent ${amount} ${selectedCurrency} to ${recipient}`
+      );
       setShowConfirmation(false);
-      setAmount('');
-      setRecipient('');
-      setNote('');
-      
-      // Refresh wallet balance
-      const userStr = localStorage.getItem('user');
+      setAmount("");
+      setRecipient("");
+      setNote("");
+
+      const userStr = localStorage.getItem("user");
       if (userStr) {
         const user = JSON.parse(userStr);
         const userWallets = await walletApi.getUserWallets(user.id);
-        const activeWallets = userWallets.filter(w => !w.isFrozen && !w.isClosed);
+        const activeWallets = userWallets.filter(
+          (w) => !w.isFrozen && !w.isClosed
+        );
         setWallets(activeWallets);
-        
-        // Update selected wallet
-        const updatedWallet = activeWallets.find(w => w.id === selectedWallet.id);
+
+        const updatedWallet = activeWallets.find(
+          (w) => w.id === selectedWallet.id
+        );
         if (updatedWallet) {
           setSelectedWallet(updatedWallet);
         }
       }
-      
-      // Refresh transactions
-      const transactions = await transactionApi.getUserTransactions(JSON.parse(userStr!).id);
-      const transactionsArray = Array.isArray(transactions) ? transactions : ((transactions as any)?.transactions || []);
-      const p2pTransactions = transactionsArray.filter((tx: any) => tx.type === 'P2P_TRANSFER');
+
+      const transactions = await transactionApi.getUserTransactions(
+        JSON.parse(userStr!).id
+      );
+      const transactionsArray = Array.isArray(transactions) ? transactions : [];
+      const p2pTransactions = transactionsArray.filter(
+        (tx: any) => tx.type === "P2P_TRANSFER"
+      );
       setRecentTransactions(p2pTransactions.slice(0, 10));
-      
     } catch (error: any) {
-      console.error('Transfer failed:', error);
-      toast.error(error.message || 'Transfer failed');
+      console.error("Transfer failed:", error);
+      toast.error(error.message || "Transfer failed");
     } finally {
       setIsProcessing(false);
     }
@@ -185,11 +285,11 @@ export function P2PTransfer({ onBack }: P2PTransferProps) {
 
   const getCurrencySymbol = (currency: string) => {
     const symbols: { [key: string]: string } = {
-      'USD': '$',
-      'EUR': '€',
-      'GBP': '£',
-      'JPY': '¥',
-      'INR': '₹'
+      USD: "$",
+      EUR: "€",
+      GBP: "£",
+      JPY: "¥",
+      INR: "₹",
     };
     return symbols[currency] || currency;
   };
@@ -198,24 +298,68 @@ export function P2PTransfer({ onBack }: P2PTransferProps) {
     const date = new Date(dateString);
     const now = new Date();
     const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
-    
-    if (diffInHours < 1) return 'Just now';
+
+    if (diffInHours < 1) return "Just now";
     if (diffInHours < 24) return `${Math.floor(diffInHours)}h ago`;
-    if (diffInHours < 48) return '1d ago';
+    if (diffInHours < 48) return "1d ago";
     return `${Math.floor(diffInHours / 24)}d ago`;
   };
 
-  const bgColor = theme === 'dark' ? 'from-cyan-900 to-blue-900' : 'from-cyan-50 to-blue-50';
-  const cardBg = theme === 'dark' ? 'bg-gray-800' : 'bg-white';
-  const textColor = theme === 'dark' ? 'text-gray-100' : 'text-gray-900';
-  const inputBg = theme === 'dark' ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-200';
+  function navigateBackByRole() {
+    try {
+      const userStr = localStorage.getItem("user");
+      if (!userStr) {
+        window.dispatchEvent(
+          new CustomEvent("navigate", {
+            detail: { screen: "home" },
+          })
+        );
+        return;
+      }
+
+      const user = JSON.parse(userStr);
+      const role = user.role;
+
+      if (role === "ADMIN") {
+        window.dispatchEvent(
+          new CustomEvent("navigate", {
+            detail: { screen: "admin" },
+          })
+        );
+      } else if (role === "MERCHANT") {
+        window.dispatchEvent(
+          new CustomEvent("navigate", {
+            detail: { screen: "merchant" },
+          })
+        );
+      } else {
+        window.dispatchEvent(
+          new CustomEvent("navigate", {
+            detail: { screen: "home" },
+          })
+        );
+      }
+    } catch {
+      window.dispatchEvent(
+        new CustomEvent("navigate", {
+          detail: { screen: "home" },
+        })
+      );
+    }
+  }
+
+  const bgColor =
+    theme === "dark" ? "from-cyan-900 to-blue-900" : "from-cyan-50 to-blue-50";
 
   return (
     <div className={`min-h-screen bg-gradient-to-br ${bgColor}`}>
       {/* Header */}
       <div className="bg-[#00BCD4] p-6 pb-8 rounded-b-3xl">
         <div className="flex items-center gap-3 mb-4">
-          <button onClick={onBack} className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center">
+          <button
+            onClick={navigateBackByRole}
+            className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center"
+          >
             <ArrowLeft size={20} className="text-white" />
           </button>
           <div>
@@ -227,55 +371,79 @@ export function P2PTransfer({ onBack }: P2PTransferProps) {
 
       <div className="px-6 -mt-4">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="w-full bg-white shadow-lg rounded-xl p-1 mb-6">
-            <TabsTrigger value="send" className="flex-1 rounded-lg">Send</TabsTrigger>
-            <TabsTrigger value="history" className="flex-1 rounded-lg">History</TabsTrigger>
-          </TabsList>
-
           <TabsContent value="send" className="mt-0 space-y-6">
-            {/* Send Form */}
             <Card className="p-6 bg-white shadow-lg border-0">
               <div className="space-y-4">
+                {/* Wallet Select */}
                 <div className="space-y-2">
                   <Label className="text-gray-700">Select Wallet</Label>
+
                   {isLoadingWallets ? (
                     <div className="h-12 rounded-xl border border-gray-200 flex items-center justify-center">
                       <span className="text-gray-500">Loading wallets...</span>
                     </div>
                   ) : wallets.length === 0 ? (
                     <div className="h-12 rounded-xl border border-gray-200 flex items-center justify-center">
-                      <span className="text-gray-500">No wallets available</span>
+                      <span className="text-gray-500">
+                        No wallets available
+                      </span>
                     </div>
                   ) : (
-                    <Select 
-                      value={selectedWallet?.id.toString()} 
+                    <Select
+                      value={selectedWallet?.id.toString()}
                       onValueChange={(value: string) => {
-                        const wallet = wallets.find(w => w.id === parseInt(value));
+                        const wallet = wallets.find(
+                          (w) => w.id === parseInt(value)
+                        );
                         if (wallet) {
                           setSelectedWallet(wallet);
-                          setSelectedCurrency(wallet.currency);
+                          getCurrencySymbol(wallet.currencyCode);
                         }
                       }}
                     >
                       <SelectTrigger className="h-12 rounded-xl border-gray-200">
-                        <SelectValue />
+                        {/* FIX: Currency symbol + code */}
+                        <SelectValue placeholder="Select Wallet">
+                          {selectedWallet ? (
+                            <span>
+                              {getCurrencySymbol(selectedWallet.currency)}{" "}
+                              {selectedWallet.balance.toFixed(2)} •{" "}
+                              {selectedWallet.walletName}
+                            </span>
+                          ) : (
+                            "Select Wallet"
+                          )}
+                        </SelectValue>
                       </SelectTrigger>
+
                       <SelectContent>
                         {wallets.map((wallet) => (
-                          <SelectItem key={wallet.id} value={wallet.id.toString()}>
+                          <SelectItem
+                            key={wallet.id}
+                            value={wallet.id.toString()}
+                          >
                             <div className="flex items-center gap-2">
                               <Wallet className="w-4 h-4" />
-                              <span>{getCurrencySymbol(wallet.currency)} {wallet.balance.toFixed(2)}</span>
-                              <span className="text-gray-500">({wallet.currency})</span>
+                              <span>
+                                {getCurrencySymbol(wallet.currency)}{" "}
+                                {wallet.balance.toFixed(2)}
+                              </span>
+
+                              {/* FIX: Currency code in dropdown */}
+                              <span className="text-gray-600 text-sm font-medium">
+                                • {wallet.currency}
+                              </span>
                             </div>
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   )}
+
                   {selectedWallet && (
                     <p className="text-xs text-gray-500">
-                      Balance: {getCurrencySymbol(selectedWallet.currency)} {selectedWallet.balance.toFixed(2)}
+                      Balance: {getCurrencySymbol(selectedWallet.currency)}{" "}
+                      {selectedWallet.balance.toFixed(2)}
                     </p>
                   )}
                 </div>
@@ -283,12 +451,20 @@ export function P2PTransfer({ onBack }: P2PTransferProps) {
                 <div className="space-y-2">
                   <Label className="text-gray-700">Recipient</Label>
                   <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                    <Search
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                      size={20}
+                    />
                     <Input
                       placeholder="Student ID or Mobile Number"
                       className="pl-10 h-12 rounded-xl border-gray-200"
                       value={recipient}
-                      onChange={(e) => setRecipient(e.target.value)}
+                      onChange={async (e) => {
+                        const val = e.target.value;
+                        setRecipient(val);
+                        // call filtering (no debounce here for simplicity)
+                        await filterWalletsForRecipient(val);
+                      }}
                     />
                   </div>
                 </div>
@@ -296,7 +472,11 @@ export function P2PTransfer({ onBack }: P2PTransferProps) {
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-2">
                     <Label className="text-gray-700">Currency</Label>
-                    <Select value={selectedCurrency} onValueChange={setSelectedCurrency} disabled={!!selectedWallet}>
+                    <Select
+                      value={selectedCurrency}
+                      onValueChange={setSelectedCurrency}
+                      disabled={!!selectedWallet}
+                    >
                       <SelectTrigger className="h-12 rounded-xl border-gray-200">
                         <SelectValue />
                       </SelectTrigger>
@@ -339,15 +519,19 @@ export function P2PTransfer({ onBack }: P2PTransferProps) {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-900">Total</span>
-                    <span className="text-gray-900">{amount || '0.00'} {selectedCurrency}</span>
+                    <span className="text-gray-900">
+                      {amount || "0.00"} {selectedCurrency}
+                    </span>
                   </div>
                 </div>
 
-                <Button 
+                <Button
                   className="w-full h-12 rounded-xl"
-                  style={{ background: '#00BCD4' }}
+                  style={{ background: "#00BCD4" }}
                   onClick={handleSendMoney}
-                  disabled={isProcessing || isLoadingWallets || wallets.length === 0}
+                  disabled={
+                    isProcessing || isLoadingWallets || wallets.length === 0
+                  }
                 >
                   {isProcessing ? (
                     <div className="flex items-center">
@@ -363,89 +547,17 @@ export function P2PTransfer({ onBack }: P2PTransferProps) {
                 </Button>
               </div>
             </Card>
-
-            {/* Recent Contacts */}
-            <div>
-              <h3 className="text-gray-900 mb-3">Recent Contacts</h3>
-              <div className="space-y-3">
-                {recentContacts.map((contact) => (
-                  <Card 
-                    key={contact.id}
-                    className="p-4 border-0 shadow-md hover:shadow-lg transition-shadow cursor-pointer"
-                    onClick={() => setRecipient(contact.studentId)}
-                  >
-                    <div className="flex items-center gap-3">
-                      <Avatar className="w-12 h-12 bg-gradient-to-br from-cyan-400 to-cyan-600">
-                        <AvatarFallback className="bg-transparent text-white">
-                          {contact.avatar}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1">
-                        <p className="text-gray-900">{contact.name}</p>
-                        <p className="text-xs text-gray-500">{contact.studentId}</p>
-                      </div>
-                      <Send className="text-gray-400" size={18} />
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="history" className="mt-0">
-            {isLoadingTransactions ? (
-              <div className="text-center py-8">
-                <p className="text-gray-500">Loading transactions...</p>
-              </div>
-            ) : recentTransactions.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-gray-500">No P2P transactions yet</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {recentTransactions.map((tx) => (
-                  <Card key={tx.id} className="p-4 border-0 shadow-md">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                          tx.status === 'COMPLETED' ? 'bg-green-100' : 
-                          tx.status === 'PENDING' ? 'bg-amber-100' : 'bg-red-100'
-                        }`}>
-                          {tx.status === 'COMPLETED' ? (
-                            <CheckCircle2 className="text-green-600" size={20} />
-                          ) : tx.status === 'PENDING' ? (
-                            <Clock className="text-amber-600" size={20} />
-                          ) : (
-                            <Clock className="text-red-600" size={20} />
-                          )}
-                        </div>
-                        <div>
-                          <p className="text-gray-900">{tx.recipient || 'P2P Transfer'}</p>
-                          <p className="text-xs text-gray-500">{formatDate(tx.createdAt)}</p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-red-600">
-                          -{getCurrencySymbol(tx.currency)}{tx.amount.toFixed(2)}
-                        </p>
-                        <p className="text-xs text-gray-500 capitalize">{tx.status.toLowerCase()}</p>
-                      </div>
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            )}
           </TabsContent>
         </Tabs>
       </div>
 
-      {/* Confirmation Dialog */}
       <Dialog open={showConfirmation} onOpenChange={setShowConfirmation}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Confirm Transfer</DialogTitle>
             <DialogDescription>
-              Are you sure you want to send {amount} {selectedCurrency} to {recipient}?
+              Are you sure you want to send {amount} {selectedCurrency} to{" "}
+              {recipient}?
             </DialogDescription>
           </DialogHeader>
           <div className="flex justify-end gap-4">
@@ -455,17 +567,14 @@ export function P2PTransfer({ onBack }: P2PTransferProps) {
             >
               Cancel
             </Button>
-            <Button
-              onClick={confirmTransfer}
-              disabled={isProcessing}
-            >
+            <Button onClick={confirmTransfer} disabled={isProcessing}>
               {isProcessing ? (
                 <div className="flex items-center">
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
                   Processing...
                 </div>
               ) : (
-                'Confirm'
+                "Confirm"
               )}
             </Button>
           </div>

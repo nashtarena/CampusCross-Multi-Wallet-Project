@@ -1,62 +1,98 @@
-import React, { useState, useEffect } from 'react';
-import { Button } from '../ui/button';
-import { Card } from '../ui/card';
-import { Input } from '../ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { Switch } from '../ui/switch';
-import { ArrowLeft, ArrowDownUp, TrendingUp, TrendingDown, Bell } from 'lucide-react';
-import { useAppContext } from '../../App';
-import { fxApi } from '../../services/fxApi';
-import { walletApi, Wallet } from '../../services/walletApi';
-import { toast } from 'sonner';
+import React, { useState, useEffect } from "react";
+import { Button } from "../ui/button";
+import { Card } from "../ui/card";
+import { Input } from "../ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
+import { Switch } from "../ui/switch";
+import {
+  ArrowLeft,
+  ArrowDownUp,
+  TrendingUp,
+  TrendingDown,
+  Bell,
+} from "lucide-react";
+import { useAppContext } from "../../App";
+import { fxApi } from "../../services/fxApi";
+import { walletApi, Wallet } from "../../services/walletApi";
+import { toast } from "sonner";
 
 interface CurrencyConversionProps {
   onBack: () => void;
 }
 
 const currencies = [
-  { code: 'USD', name: 'US Dollar', symbol: '$', color: '#2ECC71', balance: 2450.75 },
-  { code: 'EUR', name: 'Euro', symbol: '€', color: '#9B59B6', balance: 1820.50 },
-  { code: 'GBP', name: 'British Pound', symbol: '£', color: '#E67E22', balance: 980.25 },
-  { code: 'JPY', name: 'Japanese Yen', symbol: '¥', color: '#E74C3C', balance: 125000 },
-  { code: 'INR', name: 'Indian Rupee', symbol: '₹', color: '#F4C542', balance: 45500 }
+  {
+    code: "USD",
+    name: "US Dollar",
+    symbol: "$",
+    color: "#2ECC71",
+    balance: 2450.75,
+  },
+  { code: "EUR", name: "Euro", symbol: "€", color: "#9B59B6", balance: 1820.5 },
+  {
+    code: "GBP",
+    name: "British Pound",
+    symbol: "£",
+    color: "#E67E22",
+    balance: 980.25,
+  },
+  {
+    code: "JPY",
+    name: "Japanese Yen",
+    symbol: "¥",
+    color: "#E74C3C",
+    balance: 125000,
+  },
+  {
+    code: "INR",
+    name: "Indian Rupee",
+    symbol: "₹",
+    color: "#F4C542",
+    balance: 45500,
+  },
 ];
 
 const rates = [
-  { from: 'USD', to: 'EUR', rate: 0.92, change: -0.3 },
-  { from: 'USD', to: 'GBP', rate: 0.79, change: 0.1 },
-  { from: 'USD', to: 'JPY', rate: 149.85, change: 0.5 },
-  { from: 'EUR', to: 'GBP', rate: 0.86, change: 0.2 }
+  { from: "USD", to: "EUR", rate: 0.92, change: -0.3 },
+  { from: "USD", to: "GBP", rate: 0.79, change: 0.1 },
+  { from: "USD", to: "JPY", rate: 149.85, change: 0.5 },
+  { from: "EUR", to: "GBP", rate: 0.86, change: 0.2 },
 ];
 
 export function CurrencyConversion({ onBack }: CurrencyConversionProps) {
-  const [fromCurrency, setFromCurrency] = useState('USD');
-  const [toCurrency, setToCurrency] = useState('EUR');
-  const [amount, setAmount] = useState('100');
+  const [fromCurrency, setFromCurrency] = useState("USD");
+  const [toCurrency, setToCurrency] = useState("EUR");
+  const [amount, setAmount] = useState("100");
   const [rateAlertEnabled, setRateAlertEnabled] = useState(false);
   const { theme } = useAppContext();
 
-  const fromCurrencyData = currencies.find(c => c.code === fromCurrency);
-  const toCurrencyData = currencies.find(c => c.code === toCurrency);
+  const fromCurrencyData = currencies.find((c) => c.code === fromCurrency);
+  const toCurrencyData = currencies.find((c) => c.code === toCurrency);
   const [rate, setRate] = useState<number | null>(null);
   const [loadingRate, setLoadingRate] = useState(false);
   const [rateError, setRateError] = useState<string | null>(null);
   const [wallets, setWallets] = useState<Wallet[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const convertedAmount = rate ? parseFloat(amount || '0') * rate : 0;
+  const convertedAmount = rate ? parseFloat(amount || "0") * rate : 0;
 
   useEffect(() => {
     // load user's wallets so we can check balances and wallet ids
     const loadWallets = async () => {
       try {
-        const userStr = localStorage.getItem('user');
+        const userStr = localStorage.getItem("user");
         if (!userStr) return;
         const user = JSON.parse(userStr);
         const userWallets = await walletApi.getUserWallets(user.id);
         setWallets(userWallets);
       } catch (err) {
-        console.error('Failed to load wallets', err);
+        console.error("Failed to load wallets", err);
       }
     };
     loadWallets();
@@ -71,7 +107,7 @@ export function CurrencyConversion({ onBack }: CurrencyConversionProps) {
         setRate(Number(resp.rate));
       } catch (err: any) {
         if (!mounted) return;
-        setRateError(err.message || 'Failed to fetch rate');
+        setRateError(err.message || "Failed to fetch rate");
         setRate(null);
       } finally {
         if (mounted) setLoadingRate(false);
@@ -85,30 +121,81 @@ export function CurrencyConversion({ onBack }: CurrencyConversionProps) {
       setRate(1);
     }
 
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, [fromCurrency, toCurrency]);
 
   // Refresh wallets helper
   const refreshWallets = async () => {
     try {
-      const userStr = localStorage.getItem('user');
+      const userStr = localStorage.getItem("user");
       if (!userStr) return;
       const user = JSON.parse(userStr);
       const userWallets = await walletApi.getUserWallets(user.id);
       setWallets(userWallets);
     } catch (err) {
-      console.error('Failed to refresh wallets', err);
+      console.error("Failed to refresh wallets", err);
     }
   };
 
-  const bgColor = theme === 'dark' ? 'from-slate-800 to-slate-900' : 'from-slate-50 to-slate-100';
+  const bgColor =
+    theme === "dark"
+      ? "from-slate-800 to-slate-900"
+      : "from-slate-50 to-slate-100";
+
+  function navigateBackByRole() {
+    try {
+      const userStr = localStorage.getItem("user");
+      if (!userStr) {
+        window.dispatchEvent(
+          new CustomEvent("navigate", {
+            detail: { screen: "home" },
+          })
+        );
+        return;
+      }
+
+      const user = JSON.parse(userStr);
+      const role = user.role;
+
+      if (role === "ADMIN") {
+        window.dispatchEvent(
+          new CustomEvent("navigate", {
+            detail: { screen: "admin" },
+          })
+        );
+      } else if (role === "MERCHANT") {
+        window.dispatchEvent(
+          new CustomEvent("navigate", {
+            detail: { screen: "merchant" },
+          })
+        );
+      } else {
+        window.dispatchEvent(
+          new CustomEvent("navigate", {
+            detail: { screen: "home" },
+          })
+        );
+      }
+    } catch {
+      window.dispatchEvent(
+        new CustomEvent("navigate", {
+          detail: { screen: "home" },
+        })
+      );
+    }
+  }
 
   return (
     <div className={`min-h-screen bg-gradient-to-br ${bgColor}`}>
       {/* Header */}
       <div className="bg-[#607D8B] p-6 pb-20 rounded-b-3xl">
         <div className="flex items-center gap-3 mb-6">
-          <button onClick={onBack} className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center">
+          <button
+            onClick={navigateBackByRole}
+            className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center"
+          >
             <ArrowLeft size={20} className="text-white" />
           </button>
           <div>
@@ -130,7 +217,7 @@ export function CurrencyConversion({ onBack }: CurrencyConversionProps) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {currencies.map(currency => (
+                  {currencies.map((currency) => (
                     <SelectItem key={currency.code} value={currency.code}>
                       {currency.code}
                     </SelectItem>
@@ -148,13 +235,14 @@ export function CurrencyConversion({ onBack }: CurrencyConversionProps) {
               </div>
             </div>
             <p className="text-xs text-gray-500 mt-2">
-              Available: {fromCurrencyData?.symbol}{fromCurrencyData?.balance.toLocaleString()}
+              Available: {fromCurrencyData?.symbol}
+              {fromCurrencyData?.balance.toLocaleString()}
             </p>
           </div>
 
           {/* Swap Button */}
           <div className="flex justify-center -my-2 relative z-10">
-            <button 
+            <button
               onClick={() => {
                 setFromCurrency(toCurrency);
                 setToCurrency(fromCurrency);
@@ -174,7 +262,7 @@ export function CurrencyConversion({ onBack }: CurrencyConversionProps) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {currencies.map(currency => (
+                  {currencies.map((currency) => (
                     <SelectItem key={currency.code} value={currency.code}>
                       {currency.code}
                     </SelectItem>
@@ -200,14 +288,20 @@ export function CurrencyConversion({ onBack }: CurrencyConversionProps) {
             </div>
             <p className="text-gray-900">
               {loadingRate ? (
-                'Loading rate...'
+                "Loading rate..."
               ) : rateError ? (
                 <span className="text-red-600">{rateError}</span>
               ) : (
-                <>1 {fromCurrency} = {rate?.toFixed(6)} {toCurrency}</>
+                <>
+                  1 {fromCurrency} = {rate?.toFixed(6)} {toCurrency}
+                </>
               )}
             </p>
-            <p className="text-xs text-gray-500 mt-1">{loadingRate ? 'Fetching latest rate' : 'Live rate from FX service'}</p>
+            <p className="text-xs text-gray-500 mt-1">
+              {loadingRate
+                ? "Fetching latest rate"
+                : "Live rate from FX service"}
+            </p>
           </div>
 
           {/* Rate Alert */}
@@ -216,34 +310,38 @@ export function CurrencyConversion({ onBack }: CurrencyConversionProps) {
               <Bell className="text-amber-600" size={20} />
               <div>
                 <p className="text-sm text-gray-900">Rate Alert</p>
-                <p className="text-xs text-gray-600">Notify when rate changes</p>
+                <p className="text-xs text-gray-600">
+                  Notify when rate changes
+                </p>
               </div>
             </div>
-            <Switch 
-              checked={rateAlertEnabled} 
+            <Switch
+              checked={rateAlertEnabled}
               onCheckedChange={setRateAlertEnabled}
             />
           </div>
 
           {/* Convert Button */}
-          <Button 
+          <Button
             className="w-full h-12 rounded-xl"
-            style={{ background: '#607D8B' }}
+            style={{ background: "#607D8B" }}
             onClick={async () => {
               // Basic validation
               const amountNum = Number(amount || 0);
               if (!amountNum || amountNum <= 0) {
-                toast.error('Enter a valid amount to convert');
+                toast.error("Enter a valid amount to convert");
                 return;
               }
 
               if (!rate) {
-                toast.error('No exchange rate available');
+                toast.error("No exchange rate available");
                 return;
               }
 
               // Find source wallet
-              const sourceWallet = wallets.find(w => w.currencyCode === fromCurrency);
+              const sourceWallet = wallets.find(
+                (w) => w.currencyCode === fromCurrency
+              );
               if (!sourceWallet) {
                 toast.error(`No ${fromCurrency} wallet found`);
                 return;
@@ -251,44 +349,58 @@ export function CurrencyConversion({ onBack }: CurrencyConversionProps) {
 
               // Check balance
               if ((sourceWallet.balance || 0) < amountNum) {
-                toast.error('Insufficient funds in source wallet');
+                toast.error("Insufficient funds in source wallet");
                 return;
               }
 
               setIsProcessing(true);
               try {
                 // Determine or create target wallet
-                let targetWallet = wallets.find(w => w.currencyCode === toCurrency);
+                let targetWallet = wallets.find(
+                  (w) => w.currencyCode === toCurrency
+                );
                 if (!targetWallet) {
-                  const created = await walletApi.createWallet('Converted Wallet', toCurrency, false);
+                  const created = await walletApi.createWallet(
+                    "Converted Wallet",
+                    toCurrency,
+                    false
+                  );
                   targetWallet = created;
                   // optimistically add to local list
-                  setWallets(prev => [...prev, created]);
+                  setWallets((prev) => [...prev, created]);
                 }
 
                 // Compute converted amount (use rate as to-per-1-from)
                 const converted = Number((amountNum * (rate || 0)).toFixed(6));
 
                 // Deduct from source
-                await walletApi.deductFunds(sourceWallet.id, amountNum, fromCurrency);
+                await walletApi.deductFunds(
+                  sourceWallet.id,
+                  amountNum,
+                  fromCurrency
+                );
 
                 // Add to target
-                await walletApi.addFunds(targetWallet.id, converted, toCurrency);
+                await walletApi.addFunds(
+                  targetWallet.id,
+                  converted,
+                  toCurrency
+                );
 
-                toast.success('Conversion completed successfully');
+                toast.success("Conversion completed successfully");
 
                 // Refresh wallets/balances
                 await refreshWallets();
               } catch (err: any) {
-                console.error('Conversion error', err);
-                toast.error(err?.message || 'Conversion failed');
+                console.error("Conversion error", err);
+                toast.error(err?.message || "Conversion failed");
               } finally {
                 setIsProcessing(false);
               }
             }}
             disabled={isProcessing}
           >
-            {isProcessing ? 'Processing...' : 'Convert Now'}
+            {isProcessing ? "Processing..." : "Convert Now"}
           </Button>
         </Card>
       </div>

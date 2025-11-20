@@ -186,7 +186,7 @@ export const walletApi = {
     const response = await fetch(`${WALLET_API_BASE_URL}/wallets/create`, {
       method: 'POST',
       headers: getAuthHeaders(),
-      body: JSON.stringify({ 
+      body: JSON.stringify({
         walletName,
         type: 'PERSONAL',
         currencyCode: currency,
@@ -241,7 +241,7 @@ export const walletApi = {
     return response.json();
   },
 
-deleteWallet: async (walletId: number): Promise<void> => {
+  deleteWallet: async (walletId: number): Promise<void> => {
     const response = await fetch(`${WALLET_API_BASE_URL}/wallets/${walletId}`, {
       method: 'DELETE',
       headers: getAuthHeaders()
@@ -517,4 +517,21 @@ export const transactionApi = {
 
     return response.json();
   },
+
+  async getRecipientInfo(identifier: string): Promise<any> {
+    const response = await fetch(
+      `${WALLET_API_BASE_URL}/users/lookup/${identifier}`,
+      {
+        method: "GET",
+        headers: getAuthHeaders(),
+      }
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to lookup recipient: ${errorText}`);
+    }
+
+    return response.json();
+  }
 };

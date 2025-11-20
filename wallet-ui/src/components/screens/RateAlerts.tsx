@@ -1,12 +1,25 @@
-import React, { useState, useEffect } from 'react';
-import { Button } from '../ui/button';
-import { Card } from '../ui/card';
-import { Input } from '../ui/input';
-import { Label } from '../ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { Switch } from '../ui/switch';
-import { ArrowLeft, Bell, Plus, Trash2, TrendingUp, TrendingDown } from 'lucide-react';
-import { Badge } from '../ui/badge';
+import React, { useState, useEffect } from "react";
+import { Button } from "../ui/button";
+import { Card } from "../ui/card";
+import { Input } from "../ui/input";
+import { Label } from "../ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
+import { Switch } from "../ui/switch";
+import {
+  ArrowLeft,
+  Bell,
+  Plus,
+  Trash2,
+  TrendingUp,
+  TrendingDown,
+} from "lucide-react";
+import { Badge } from "../ui/badge";
 
 // Backend alert structure - matches Java RateAlert entity
 interface BackendAlert {
@@ -14,8 +27,8 @@ interface BackendAlert {
   userId: number;
   currencyPair: string; // e.g., "USD/EUR"
   thresholdValue: number;
-  direction: 'ABOVE' | 'BELOW';
-  status: 'ACTIVE' | 'INACTIVE'| 'TRIGGERED';
+  direction: "ABOVE" | "BELOW";
+  status: "ACTIVE" | "INACTIVE" | "TRIGGERED";
   createdAt?: string;
 }
 
@@ -24,11 +37,11 @@ interface FrontendAlert {
   id: number;
   from: string;
   to: string;
-  direction: 'ABOVE' | 'BELOW';
+  direction: "ABOVE" | "BELOW";
   rate: number;
   currentRate: number;
   active: boolean;
-  status: 'ACTIVE' | 'INACTIVE'| 'TRIGGERED';
+  status: "ACTIVE" | "INACTIVE" | "TRIGGERED";
 }
 
 interface RateAlertsProps {
@@ -37,45 +50,48 @@ interface RateAlertsProps {
 }
 
 // API Service Functions
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api/v1';
+const API_BASE_URL =
+  import.meta.env.VITE_API_URL || "http://localhost:8080/api/v1";
 
 const alertService = {
   // Create new alert
-  createAlert: async (alert: Omit<BackendAlert, 'id' | 'createdAt'>): Promise<BackendAlert> => {
+  createAlert: async (
+    alert: Omit<BackendAlert, "id" | "createdAt">
+  ): Promise<BackendAlert> => {
     const response = await fetch(`${API_BASE_URL}/alerts`, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
       body: JSON.stringify(alert),
     });
-    
+
     if (!response.ok) {
       const errorText = await response.text();
       throw new Error(`Failed to create alert: ${errorText}`);
     }
-    
+
     return response.json();
   },
 
   // Get alerts for user
   getAlertsByUserId: async (userId: number): Promise<BackendAlert[]> => {
     const response = await fetch(`${API_BASE_URL}/alerts/user/${userId}`);
-    
+
     if (!response.ok) {
       const errorText = await response.text();
       throw new Error(`Failed to fetch alerts: ${errorText}`);
     }
-    
+
     return response.json();
   },
 
   // Delete alert
   deleteAlert: async (alertId: number): Promise<void> => {
     const response = await fetch(`${API_BASE_URL}/alerts/${alertId}`, {
-      method: 'DELETE',
+      method: "DELETE",
     });
-    
+
     if (!response.ok) {
       const errorText = await response.text();
       throw new Error(`Failed to delete alert: ${errorText}`);
@@ -87,12 +103,12 @@ const alertService = {
 const getCurrentRate = async (from: string, to: string): Promise<number> => {
   try {
     const response = await fetch(`${API_BASE_URL}/fx/quote/${from}/${to}`);
-    
+
     if (!response.ok) {
       console.error(`Failed to fetch rate for ${from}/${to}`);
       return 0;
     }
-    
+
     const data = await response.json();
     // Backend returns { from: "USD", to: "EUR", rate: 0.85 }
     return data.rate || 0;
@@ -107,7 +123,7 @@ const transformBackendToFrontend = (
   backendAlert: BackendAlert,
   currentRates: Map<string, number>
 ): FrontendAlert => {
-  const [from, to] = backendAlert.currencyPair.split('/');
+  const [from, to] = backendAlert.currencyPair.split("/");
   const currentRate = currentRates.get(backendAlert.currencyPair) || 0;
 
   return {
@@ -117,7 +133,7 @@ const transformBackendToFrontend = (
     direction: backendAlert.direction,
     rate: backendAlert.thresholdValue,
     currentRate,
-    active: backendAlert.status === 'ACTIVE', // Only ACTIVE alerts are considered active
+    active: backendAlert.status === "ACTIVE", // Only ACTIVE alerts are considered active
     status: backendAlert.status, // Pass through the actual status from backend
   };
 };
@@ -127,28 +143,30 @@ const transformFrontendToBackend = (
   userId: number,
   from: string,
   to: string,
-  direction: 'ABOVE' | 'BELOW',
+  direction: "ABOVE" | "BELOW",
   targetRate: string,
   active: boolean = true
-): Omit<BackendAlert, 'id' | 'createdAt'> => {
+): Omit<BackendAlert, "id" | "createdAt"> => {
   return {
     userId,
     currencyPair: `${from}/${to}`,
     thresholdValue: parseFloat(targetRate),
     direction,
-    status: active ? 'ACTIVE' : 'INACTIVE',
+    status: active ? "ACTIVE" : "INACTIVE",
   };
 };
 
 export function RateAlerts({ onBack, userId = 1 }: RateAlertsProps) {
   // userId defaults to 1 for development (before auth is implemented)
-  const [fromCurrency, setFromCurrency] = useState('USD');
-  const [toCurrency, setToCurrency] = useState('EUR');
-  const [direction, setDirection] = useState<'ABOVE' | 'BELOW'>('ABOVE');
-  const [targetRate, setTargetRate] = useState('');
-  
+  const [fromCurrency, setFromCurrency] = useState("USD");
+  const [toCurrency, setToCurrency] = useState("EUR");
+  const [direction, setDirection] = useState<"ABOVE" | "BELOW">("ABOVE");
+  const [targetRate, setTargetRate] = useState("");
+
   const [alerts, setAlerts] = useState<FrontendAlert[]>([]);
-  const [currentRates, setCurrentRates] = useState<Map<string, number>>(new Map());
+  const [currentRates, setCurrentRates] = useState<Map<string, number>>(
+    new Map()
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -160,11 +178,11 @@ export function RateAlerts({ onBack, userId = 1 }: RateAlertsProps) {
   // Load current rates periodically
   useEffect(() => {
     const updateRates = async () => {
-      const uniquePairs = [...new Set(alerts.map(a => `${a.from}/${a.to}`))];
+      const uniquePairs = [...new Set(alerts.map((a) => `${a.from}/${a.to}`))];
       const rateMap = new Map<string, number>();
-      
+
       for (const pair of uniquePairs) {
-        const [from, to] = pair.split('/');
+        const [from, to] = pair.split("/");
         try {
           const rate = await getCurrentRate(from, to);
           rateMap.set(pair, rate);
@@ -172,14 +190,15 @@ export function RateAlerts({ onBack, userId = 1 }: RateAlertsProps) {
           console.error(`Failed to fetch rate for ${pair}`, err);
         }
       }
-      
+
       setCurrentRates(rateMap);
-      
+
       // Update alerts with new rates
-      setAlerts(prevAlerts => 
-        prevAlerts.map(alert => ({
+      setAlerts((prevAlerts) =>
+        prevAlerts.map((alert) => ({
           ...alert,
-          currentRate: rateMap.get(`${alert.from}/${alert.to}`) || alert.currentRate
+          currentRate:
+            rateMap.get(`${alert.from}/${alert.to}`) || alert.currentRate,
         }))
       );
     };
@@ -194,16 +213,18 @@ export function RateAlerts({ onBack, userId = 1 }: RateAlertsProps) {
   const loadAlerts = async () => {
     setLoading(true);
     setError(null);
-    
+
     try {
       const backendAlerts = await alertService.getAlertsByUserId(userId);
-      
+
       // Fetch current rates for all currency pairs
-      const uniquePairs = [...new Set(backendAlerts.map(a => a.currencyPair))];
+      const uniquePairs = [
+        ...new Set(backendAlerts.map((a) => a.currencyPair)),
+      ];
       const rateMap = new Map<string, number>();
-      
+
       for (const pair of uniquePairs) {
-        const [from, to] = pair.split('/');
+        const [from, to] = pair.split("/");
         try {
           const rate = await getCurrentRate(from, to);
           rateMap.set(pair, rate);
@@ -211,15 +232,15 @@ export function RateAlerts({ onBack, userId = 1 }: RateAlertsProps) {
           console.error(`Failed to fetch rate for ${pair}`, err);
         }
       }
-      
+
       setCurrentRates(rateMap);
-      const frontendAlerts = backendAlerts.map(a => 
+      const frontendAlerts = backendAlerts.map((a) =>
         transformBackendToFrontend(a, rateMap)
       );
       setAlerts(frontendAlerts);
     } catch (err) {
-      setError('Failed to load alerts. Please try again.');
-      console.error('Error loading alerts:', err);
+      setError("Failed to load alerts. Please try again.");
+      console.error("Error loading alerts:", err);
     } finally {
       setLoading(false);
     }
@@ -227,12 +248,12 @@ export function RateAlerts({ onBack, userId = 1 }: RateAlertsProps) {
 
   const handleCreateAlert = async () => {
     if (!targetRate || parseFloat(targetRate) <= 0) {
-      setError('Please enter a valid target rate');
+      setError("Please enter a valid target rate");
       return;
     }
 
     if (fromCurrency === toCurrency) {
-      setError('Please select different currencies');
+      setError("Please select different currencies");
       return;
     }
 
@@ -249,15 +270,15 @@ export function RateAlerts({ onBack, userId = 1 }: RateAlertsProps) {
       );
 
       await alertService.createAlert(newAlert);
-      
+
       // Reset form
-      setTargetRate('');
-      
+      setTargetRate("");
+
       // Reload alerts
       await loadAlerts();
     } catch (err) {
-      setError('Failed to create alert. Please try again.');
-      console.error('Error creating alert:', err);
+      setError("Failed to create alert. Please try again.");
+      console.error("Error creating alert:", err);
     } finally {
       setLoading(false);
     }
@@ -271,8 +292,8 @@ export function RateAlerts({ onBack, userId = 1 }: RateAlertsProps) {
       await alertService.deleteAlert(alertId);
       await loadAlerts();
     } catch (err) {
-      setError('Failed to delete alert. Please try again.');
-      console.error('Error deleting alert:', err);
+      setError("Failed to delete alert. Please try again.");
+      console.error("Error deleting alert:", err);
     } finally {
       setLoading(false);
     }
@@ -286,7 +307,7 @@ export function RateAlerts({ onBack, userId = 1 }: RateAlertsProps) {
     try {
       // Delete existing alert
       await alertService.deleteAlert(alert.id);
-      
+
       // Create new alert with toggled status
       const newAlert = transformFrontendToBackend(
         userId,
@@ -296,26 +317,69 @@ export function RateAlerts({ onBack, userId = 1 }: RateAlertsProps) {
         alert.rate.toString(),
         !alert.active
       );
-      
+
       await alertService.createAlert(newAlert);
       await loadAlerts();
     } catch (err) {
-      setError('Failed to toggle alert. Please try again.');
-      console.error('Error toggling alert:', err);
+      setError("Failed to toggle alert. Please try again.");
+      console.error("Error toggling alert:", err);
     } finally {
       setLoading(false);
     }
   };
 
-  const activeAlertsCount = alerts.filter(a => a.active).length;
+  const activeAlertsCount = alerts.filter((a) => a.active).length;
+
+  function navigateBackByRole() {
+    try {
+      const userStr = localStorage.getItem("user");
+      if (!userStr) {
+        window.dispatchEvent(
+          new CustomEvent("navigate", {
+            detail: { screen: "home" },
+          })
+        );
+        return;
+      }
+
+      const user = JSON.parse(userStr);
+      const role = user.role;
+
+      if (role === "ADMIN") {
+        window.dispatchEvent(
+          new CustomEvent("navigate", {
+            detail: { screen: "admin" },
+          })
+        );
+      } else if (role === "MERCHANT") {
+        window.dispatchEvent(
+          new CustomEvent("navigate", {
+            detail: { screen: "merchant" },
+          })
+        );
+      } else {
+        window.dispatchEvent(
+          new CustomEvent("navigate", {
+            detail: { screen: "home" },
+          })
+        );
+      }
+    } catch {
+      window.dispatchEvent(
+        new CustomEvent("navigate", {
+          detail: { screen: "home" },
+        })
+      );
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
       {/* Header */}
       <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-6 pb-8 rounded-b-3xl">
         <div className="flex items-center gap-3 mb-4">
-          <button 
-            onClick={onBack} 
+          <button
+            onClick={navigateBackByRole}
             className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center"
           >
             <ArrowLeft size={20} className="text-white" />
@@ -331,8 +395,13 @@ export function RateAlerts({ onBack, userId = 1 }: RateAlertsProps) {
             <Bell className="text-white" size={24} />
           </div>
           <div>
-            <p className="text-white">{activeAlertsCount} Active Alert{activeAlertsCount !== 1 ? 's' : ''}</p>
-            <p className="text-xs text-white/80">Monitoring exchange rates for you</p>
+            <p className="text-white">
+              {activeAlertsCount} Active Alert
+              {activeAlertsCount !== 1 ? "s" : ""}
+            </p>
+            <p className="text-xs text-white/80">
+              Monitoring exchange rates for you
+            </p>
           </div>
         </div>
       </div>
@@ -392,7 +461,12 @@ export function RateAlerts({ onBack, userId = 1 }: RateAlertsProps) {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label className="text-gray-700">Direction</Label>
-                <Select value={direction} onValueChange={(val) => setDirection(val as 'ABOVE' | 'BELOW')}>
+                <Select
+                  value={direction}
+                  onValueChange={(val) =>
+                    setDirection(val as "ABOVE" | "BELOW")
+                  }
+                >
                   <SelectTrigger className="h-12 rounded-xl border-gray-200">
                     <SelectValue />
                   </SelectTrigger>
@@ -416,12 +490,12 @@ export function RateAlerts({ onBack, userId = 1 }: RateAlertsProps) {
               </div>
             </div>
 
-            <Button 
+            <Button
               className="w-full h-12 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"
               onClick={handleCreateAlert}
               disabled={loading}
             >
-              {loading ? 'Creating...' : 'Create Alert'}
+              {loading ? "Creating..." : "Create Alert"}
             </Button>
           </div>
         </Card>
@@ -430,12 +504,16 @@ export function RateAlerts({ onBack, userId = 1 }: RateAlertsProps) {
       {/* Active Alerts */}
       <div className="px-6 pb-6">
         <h3 className="text-gray-900 mb-3">
-          {loading && alerts.length === 0 ? 'Loading alerts...' : 'Active Alerts'}
+          {loading && alerts.length === 0
+            ? "Loading alerts..."
+            : "Active Alerts"}
         </h3>
-        
+
         {alerts.length === 0 && !loading ? (
           <Card className="p-6 bg-white shadow-md border-0 text-center">
-            <p className="text-gray-500">No alerts yet. Create your first alert above!</p>
+            <p className="text-gray-500">
+              No alerts yet. Create your first alert above!
+            </p>
           </Card>
         ) : (
           <div className="space-y-3">
@@ -448,11 +526,13 @@ export function RateAlerts({ onBack, userId = 1 }: RateAlertsProps) {
                         {alert.from}/{alert.to}
                       </p>
                       {(() => {
-                        const isTriggered = alert.currentRate > 0 && (
-                          (alert.direction === 'ABOVE' && alert.currentRate > alert.rate) ||
-                          (alert.direction === 'BELOW' && alert.currentRate < alert.rate)
-                        );
-                        
+                        const isTriggered =
+                          alert.currentRate > 0 &&
+                          ((alert.direction === "ABOVE" &&
+                            alert.currentRate > alert.rate) ||
+                            (alert.direction === "BELOW" &&
+                              alert.currentRate < alert.rate));
+
                         if (isTriggered) {
                           return (
                             <Badge className="bg-orange-100 text-orange-700">
@@ -460,41 +540,49 @@ export function RateAlerts({ onBack, userId = 1 }: RateAlertsProps) {
                             </Badge>
                           );
                         }
-                        
+
                         return (
-                          <Badge 
-                            variant={alert.active ? 'default' : 'secondary'}
-                            className={alert.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}
+                          <Badge
+                            variant={alert.active ? "default" : "secondary"}
+                            className={
+                              alert.active
+                                ? "bg-green-100 text-green-700"
+                                : "bg-gray-100 text-gray-600"
+                            }
                           >
-                            {alert.active ? 'Active' : 'Inactive'}
+                            {alert.active ? "Active" : "Inactive"}
                           </Badge>
                         );
                       })()}
                     </div>
                     <p className="text-sm text-gray-600">
-                      Alert when rate goes {alert.direction.toLowerCase()} {alert.rate.toFixed(4)}
+                      Alert when rate goes {alert.direction.toLowerCase()}{" "}
+                      {alert.rate.toFixed(4)}
                     </p>
                     <div className="flex items-center gap-2 mt-2">
-                      <span className="text-xs text-gray-500">Current rate:</span>
-                      <span className="text-sm text-gray-900">
-                        {alert.currentRate > 0 ? alert.currentRate.toFixed(4) : 'Loading...'}
+                      <span className="text-xs text-gray-500">
+                        Current rate:
                       </span>
-                      {alert.currentRate > 0 && (
-                        alert.currentRate > alert.rate ? (
+                      <span className="text-sm text-gray-900">
+                        {alert.currentRate > 0
+                          ? alert.currentRate.toFixed(4)
+                          : "Loading..."}
+                      </span>
+                      {alert.currentRate > 0 &&
+                        (alert.currentRate > alert.rate ? (
                           <TrendingUp className="text-green-500" size={14} />
                         ) : (
                           <TrendingDown className="text-red-500" size={14} />
-                        )
-                      )}
+                        ))}
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <Switch 
-                      checked={alert.active} 
+                    <Switch
+                      checked={alert.active}
                       onCheckedChange={() => handleToggleAlert(alert)}
                       disabled={loading}
                     />
-                    <button 
+                    <button
                       className="text-red-500 hover:bg-red-50 p-2 rounded-lg disabled:opacity-50"
                       onClick={() => handleDeleteAlert(alert.id)}
                       disabled={loading}

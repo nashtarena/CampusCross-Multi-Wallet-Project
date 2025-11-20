@@ -1,21 +1,66 @@
-import React, { useState } from 'react';
-import { Button } from '../ui/button';
-import { Card } from '../ui/card';
-import { Input } from '../ui/input';
-import { ArrowLeft, QrCode, Wifi, MapPin, Coffee, Book, Utensils, Store, CheckCircle2, Camera } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
-import { toast } from 'sonner@2.0.3';
-import { useAppContext } from '../../App';
+import React, { useState } from "react";
+import { Button } from "../ui/button";
+import { Card } from "../ui/card";
+import { Input } from "../ui/input";
+import {
+  ArrowLeft,
+  QrCode,
+  Wifi,
+  MapPin,
+  Coffee,
+  Book,
+  Utensils,
+  Store,
+  CheckCircle2,
+  Camera,
+} from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "../ui/dialog";
+import { toast } from "sonner@2.0.3";
+import { useAppContext } from "../../App";
 
 interface CampusPaymentsProps {
   onBack: () => void;
 }
 
 const merchants = [
-  { id: 1, name: 'Campus Cafeteria', category: 'Food', icon: Utensils, distance: '0.2 km', color: 'from-orange-400 to-orange-600' },
-  { id: 2, name: 'University Bookstore', category: 'Books', icon: Book, distance: '0.5 km', color: 'from-blue-400 to-blue-600' },
-  { id: 3, name: 'Student Coffee Shop', category: 'Cafe', icon: Coffee, distance: '0.3 km', color: 'from-amber-400 to-amber-600' },
-  { id: 4, name: 'Campus Store', category: 'Supplies', icon: Store, distance: '0.7 km', color: 'from-purple-400 to-purple-600' }
+  {
+    id: 1,
+    name: "Campus Cafeteria",
+    category: "Food",
+    icon: Utensils,
+    distance: "0.2 km",
+    color: "from-orange-400 to-orange-600",
+  },
+  {
+    id: 2,
+    name: "University Bookstore",
+    category: "Books",
+    icon: Book,
+    distance: "0.5 km",
+    color: "from-blue-400 to-blue-600",
+  },
+  {
+    id: 3,
+    name: "Student Coffee Shop",
+    category: "Cafe",
+    icon: Coffee,
+    distance: "0.3 km",
+    color: "from-amber-400 to-amber-600",
+  },
+  {
+    id: 4,
+    name: "Campus Store",
+    category: "Supplies",
+    icon: Store,
+    distance: "0.7 km",
+    color: "from-purple-400 to-purple-600",
+  },
 ];
 
 export function CampusPayments({ onBack }: CampusPaymentsProps) {
@@ -30,13 +75,13 @@ export function CampusPayments({ onBack }: CampusPaymentsProps) {
     try {
       // Request camera permission
       const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-      
+
       // Stop the stream immediately (we're just checking permission)
-      stream.getTracks().forEach(track => track.stop());
-      
+      stream.getTracks().forEach((track) => track.stop());
+
       setScanningQR(true);
-      toast.success('Camera access granted');
-      
+      toast.success("Camera access granted");
+
       // Simulate QR code scanning
       setTimeout(() => {
         setScanningQR(false);
@@ -45,12 +90,16 @@ export function CampusPayments({ onBack }: CampusPaymentsProps) {
         setTimeout(() => setShowSuccess(false), 2000);
       }, 2000);
     } catch (error) {
-      toast.error('Camera access denied. Please allow camera access to scan QR codes.');
+      toast.error(
+        "Camera access denied. Please allow camera access to scan QR codes."
+      );
     }
   };
 
   const handleNFCPayment = () => {
-    toast.success('NFC payment initiated. Tap your device to complete payment.');
+    toast.success(
+      "NFC payment initiated. Tap your device to complete payment."
+    );
     setTimeout(() => {
       setShowNFCPayment(false);
       setShowSuccess(true);
@@ -58,14 +107,63 @@ export function CampusPayments({ onBack }: CampusPaymentsProps) {
     }, 1500);
   };
 
-  const bgColor = theme === 'dark' ? 'from-teal-900 to-emerald-900' : 'from-teal-50 to-emerald-50';
+  function navigateBackByRole() {
+    try {
+      const userStr = localStorage.getItem("user");
+      if (!userStr) {
+        window.dispatchEvent(
+          new CustomEvent("navigate", {
+            detail: { screen: "home" },
+          })
+        );
+        return;
+      }
+
+      const user = JSON.parse(userStr);
+      const role = user.role;
+
+      if (role === "ADMIN") {
+        window.dispatchEvent(
+          new CustomEvent("navigate", {
+            detail: { screen: "admin" },
+          })
+        );
+      } else if (role === "MERCHANT") {
+        window.dispatchEvent(
+          new CustomEvent("navigate", {
+            detail: { screen: "merchant" },
+          })
+        );
+      } else {
+        window.dispatchEvent(
+          new CustomEvent("navigate", {
+            detail: { screen: "home" },
+          })
+        );
+      }
+    } catch {
+      window.dispatchEvent(
+        new CustomEvent("navigate", {
+          detail: { screen: "home" },
+        })
+      );
+    }
+  }
+
+  const bgColor =
+    theme === "dark"
+      ? "from-teal-900 to-emerald-900"
+      : "from-teal-50 to-emerald-50";
 
   return (
     <div className={`min-h-screen bg-gradient-to-br ${bgColor}`}>
       {/* Header */}
       <div className="bg-[#009688] p-6 pb-8 rounded-b-3xl">
         <div className="flex items-center gap-3 mb-6">
-          <button onClick={onBack} className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center">
+          <button
+            onClick={navigateBackByRole}
+            className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center"
+          >
             <ArrowLeft size={20} className="text-white" />
           </button>
           <div>
@@ -78,7 +176,7 @@ export function CampusPayments({ onBack }: CampusPaymentsProps) {
       {/* Payment Methods */}
       <div className="px-6 -mt-4 mb-6">
         <div className="grid grid-cols-2 gap-3">
-          <Card 
+          <Card
             className="p-6 bg-white shadow-lg border-0 cursor-pointer hover:shadow-xl transition-shadow"
             onClick={() => setShowQR(true)}
           >
@@ -91,7 +189,7 @@ export function CampusPayments({ onBack }: CampusPaymentsProps) {
             </div>
           </Card>
 
-          <Card 
+          <Card
             className="p-6 bg-white shadow-lg border-0 cursor-pointer hover:shadow-xl transition-shadow"
             onClick={() => setShowNFCPayment(true)}
           >
@@ -117,7 +215,7 @@ export function CampusPayments({ onBack }: CampusPaymentsProps) {
           {merchants.map((merchant) => {
             const Icon = merchant.icon;
             return (
-              <Card 
+              <Card
                 key={merchant.id}
                 className="p-4 border-0 shadow-md hover:shadow-lg transition-shadow cursor-pointer"
                 onClick={() => {
@@ -125,21 +223,27 @@ export function CampusPayments({ onBack }: CampusPaymentsProps) {
                 }}
               >
                 <div className="flex items-center gap-3">
-                  <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${merchant.color} flex items-center justify-center flex-shrink-0`}>
+                  <div
+                    className={`w-12 h-12 rounded-xl bg-gradient-to-br ${merchant.color} flex items-center justify-center flex-shrink-0`}
+                  >
                     <Icon className="text-white" size={24} />
                   </div>
                   <div className="flex-1">
                     <p className="text-gray-900">{merchant.name}</p>
                     <div className="flex items-center gap-2 mt-1">
-                      <span className="text-xs text-gray-500">{merchant.category}</span>
+                      <span className="text-xs text-gray-500">
+                        {merchant.category}
+                      </span>
                       <span className="text-xs text-gray-400">•</span>
-                      <span className="text-xs text-teal-600">{merchant.distance}</span>
+                      <span className="text-xs text-teal-600">
+                        {merchant.distance}
+                      </span>
                     </div>
                   </div>
-                  <Button 
-                    size="sm" 
+                  <Button
+                    size="sm"
                     className="rounded-lg"
-                    style={{ background: '#009688' }}
+                    style={{ background: "#009688" }}
                   >
                     Pay
                   </Button>
@@ -164,9 +268,9 @@ export function CampusPayments({ onBack }: CampusPaymentsProps) {
               <QrCode className="text-teal-600" size={200} />
             </div>
             <div className="flex gap-2 w-full">
-              <Button 
+              <Button
                 className="flex-1 rounded-xl"
-                style={{ background: '#009688' }}
+                style={{ background: "#009688" }}
                 onClick={() => {
                   setShowQR(false);
                   setShowSuccess(true);
@@ -175,7 +279,7 @@ export function CampusPayments({ onBack }: CampusPaymentsProps) {
               >
                 Confirm Payment
               </Button>
-              <Button 
+              <Button
                 variant="outline"
                 className="flex-1 rounded-xl"
                 onClick={() => setShowScanQR(true)}
@@ -208,13 +312,13 @@ export function CampusPayments({ onBack }: CampusPaymentsProps) {
                 <Camera className="text-white" size={80} />
               )}
             </div>
-            <Button 
+            <Button
               className="w-full rounded-xl"
-              style={{ background: '#009688' }}
+              style={{ background: "#009688" }}
               onClick={handleScanQR}
               disabled={scanningQR}
             >
-              {scanningQR ? 'Scanning...' : 'Start Scanning'}
+              {scanningQR ? "Scanning..." : "Start Scanning"}
             </Button>
           </div>
         </DialogContent>
@@ -236,9 +340,9 @@ export function CampusPayments({ onBack }: CampusPaymentsProps) {
             <p className="text-gray-600 text-center mb-6">
               Hold your device near the payment terminal
             </p>
-            <Button 
+            <Button
               className="w-full rounded-xl"
-              style={{ background: '#009688' }}
+              style={{ background: "#009688" }}
               onClick={handleNFCPayment}
             >
               Initiate Payment

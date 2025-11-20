@@ -375,7 +375,7 @@ export function Home({ onNavigate }: HomeProps) {
         </div>
         <div className="space-y-3">
           {wallets.length > 0 ? (
-            wallets.slice(0, 3).map((wallet) => (
+            wallets.slice(0, wallets.length).map((wallet) => (
               <WalletCard 
                 key={wallet.id}
                 wallet={wallet}
@@ -484,17 +484,6 @@ export function Home({ onNavigate }: HomeProps) {
             </div>
             
             <div className="border-t pt-4">
-              <Button 
-                variant="outline" 
-                className="w-full flex items-center gap-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                onClick={() => {
-                  onNavigate('admin-login');
-                  setShowSettings(false);
-                }}
-              >
-                <Settings size={16} />
-                Admin Access
-              </Button>
               <Button 
                 variant="outline" 
                 className="w-full flex items-center gap-2 text-red-600 hover:text-red-700 hover:bg-red-50"

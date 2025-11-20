@@ -342,7 +342,7 @@ export default function MerchantDashboard({ onNavigate }: HomeProps) {
         </div>
         <div className="space-y-3">
           {wallets.length > 0 ? (
-            wallets.slice(0, 3).map((wallet) => (
+            wallets.slice(0, wallets.length).map((wallet) => (
               <WalletCard 
                 key={wallet.id}
                 wallet={wallet}

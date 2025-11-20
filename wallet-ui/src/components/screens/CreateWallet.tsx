@@ -1,13 +1,19 @@
-import { useState } from 'react';
-import { ArrowLeft, Plus, Wallet as WalletIcon } from 'lucide-react';
-import { Button } from '../ui/button';
-import { Input } from '../ui/input';
-import { Label } from '../ui/label';
-import { Card } from '../ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { Switch } from '../ui/switch';
-import { toast } from 'sonner';
-import { walletApi } from '../../services/walletApi';
+import { useState } from "react";
+import { ArrowLeft, Plus, Wallet as WalletIcon } from "lucide-react";
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
+import { Label } from "../ui/label";
+import { Card } from "../ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
+import { Switch } from "../ui/switch";
+import { toast } from "sonner";
+import { walletApi } from "../../services/walletApi";
 
 interface CreateWalletProps {
   onBack: () => void;
@@ -15,37 +21,82 @@ interface CreateWalletProps {
 }
 
 export function CreateWallet({ onBack, onWalletCreated }: CreateWalletProps) {
-  const [walletName, setWalletName] = useState('');
-  const [currency, setCurrency] = useState('USD');
+  const [walletName, setWalletName] = useState("");
+  const [currency, setCurrency] = useState("USD");
   const [isDefault, setIsDefault] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
 
   const currencies = [
-    { value: 'USD', label: 'USD - US Dollar' },
-    { value: 'EUR', label: 'EUR - Euro' },
-    { value: 'GBP', label: 'GBP - British Pound' },
-    { value: 'JPY', label: 'JPY - Japanese Yen' },
-    { value: 'INR', label: 'INR - Indian Rupee' },
+    { value: "USD", label: "USD - US Dollar" },
+    { value: "EUR", label: "EUR - Euro" },
+    { value: "GBP", label: "GBP - British Pound" },
+    { value: "JPY", label: "JPY - Japanese Yen" },
+    { value: "INR", label: "INR - Indian Rupee" },
   ];
 
   const handleCreateWallet = async () => {
     if (!walletName.trim()) {
-      toast.error('Please enter a wallet name');
+      toast.error("Please enter a wallet name");
       return;
     }
 
     setIsLoading(true);
     try {
       await walletApi.createWallet(walletName, currency, isDefault);
-      toast.success('Wallet created successfully!');
+      toast.success("Wallet created successfully!");
       onWalletCreated();
     } catch (error) {
-      console.error('Create wallet error:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to create wallet');
+      console.error("Create wallet error:", error);
+      toast.error(
+        error instanceof Error ? error.message : "Failed to create wallet"
+      );
     } finally {
       setIsLoading(false);
     }
   };
+
+  function navigateBackByRole() {
+    try {
+      const userStr = localStorage.getItem("user");
+      if (!userStr) {
+        window.dispatchEvent(
+          new CustomEvent("navigate", {
+            detail: { screen: "home" },
+          })
+        );
+        return;
+      }
+
+      const user = JSON.parse(userStr);
+      const role = user.role;
+
+      if (role === "ADMIN") {
+        window.dispatchEvent(
+          new CustomEvent("navigate", {
+            detail: { screen: "admin" },
+          })
+        );
+      } else if (role === "MERCHANT") {
+        window.dispatchEvent(
+          new CustomEvent("navigate", {
+            detail: { screen: "merchant" },
+          })
+        );
+      } else {
+        window.dispatchEvent(
+          new CustomEvent("navigate", {
+            detail: { screen: "home" },
+          })
+        );
+      }
+    } catch {
+      window.dispatchEvent(
+        new CustomEvent("navigate", {
+          detail: { screen: "home" },
+        })
+      );
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -54,13 +105,15 @@ export function CreateWallet({ onBack, onWalletCreated }: CreateWalletProps) {
         <Button
           variant="ghost"
           size="icon"
-          onClick={onBack}
+          onClick={navigateBackByRole}
           className="rounded-full"
         >
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Create New Wallet</h1>
+          <h1 className="text-2xl font-bold text-gray-900">
+            Create New Wallet
+          </h1>
           <p className="text-gray-600">Add a new wallet to your account</p>
         </div>
       </div>
@@ -104,10 +157,7 @@ export function CreateWallet({ onBack, onWalletCreated }: CreateWalletProps) {
                 This will be your primary wallet for transactions
               </p>
             </div>
-            <Switch
-              checked={isDefault}
-              onCheckedChange={setIsDefault}
-            />
+            <Switch checked={isDefault} onCheckedChange={setIsDefault} />
           </div>
 
           {/* Create Button */}
@@ -134,10 +184,14 @@ export function CreateWallet({ onBack, onWalletCreated }: CreateWalletProps) {
             <div className="flex items-start gap-3">
               <WalletIcon className="w-5 h-5 text-blue-600 mt-0.5" />
               <div>
-                <h4 className="font-semibold text-blue-900 mb-1">Wallet Information</h4>
+                <h4 className="font-semibold text-blue-900 mb-1">
+                  Wallet Information
+                </h4>
                 <ul className="text-sm text-blue-800 space-y-1">
                   <li>• Personal wallets have daily and monthly limits</li>
-                  <li>• You can create multiple wallets in different currencies</li>
+                  <li>
+                    • You can create multiple wallets in different currencies
+                  </li>
                   <li>• Default wallet is used for quick transactions</li>
                 </ul>
               </div>
