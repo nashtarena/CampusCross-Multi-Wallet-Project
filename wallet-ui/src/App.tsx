@@ -95,6 +95,21 @@ export default function App() {
     }
   }, []);
 
+  // Listen for programmatic navigation events from child components
+  React.useEffect(() => {
+    const handler = (e: Event) => {
+      try {
+        const custom = e as CustomEvent;
+        const screen = custom.detail?.screen as Screen | undefined;
+        if (screen) setCurrentScreen(screen);
+      } catch (err) {
+        // ignore malformed events
+      }
+    };
+    window.addEventListener('navigate', handler as EventListener);
+    return () => window.removeEventListener('navigate', handler as EventListener);
+  }, []);
+
   const renderScreen = () => {
     switch (currentScreen) {
       case 'welcome':

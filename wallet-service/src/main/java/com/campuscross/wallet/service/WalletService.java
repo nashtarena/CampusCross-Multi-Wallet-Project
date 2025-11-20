@@ -10,6 +10,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 import java.util.UUID;
 
 @Service
@@ -181,6 +183,36 @@ public class WalletService {
 
     public BigDecimal getTotalBalance(String userId) {
         return walletRepository.getTotalBalanceByUserId(userId);
+    }
+
+    /**
+     * Return the balance for the given wallet/user in the requested currency.
+     * If the provided wallet is already the requested currency, its balance is returned.
+     * Otherwise we look up another wallet for the same user having the requested currency
+     * and return its balance (or BigDecimal.ZERO when none found).
+     */
+    public BigDecimal getBalanceByCurrency(Long walletId, String currencyCode) {
+        Wallet wallet = getWalletById(walletId);
+        if (wallet.getCurrencyCode() != null && wallet.getCurrencyCode().equalsIgnoreCase(currencyCode)) {
+            return wallet.getBalance();
+        }
+
+        return walletRepository.findByUserIdAndCurrencyCode(wallet.getUser().getId(), currencyCode)
+                .map(Wallet::getBalance)
+                .orElse(BigDecimal.ZERO);
+    }
+
+    /**
+     * Return a map of currency code -> total balance across all wallets for the user.
+     */
+    public Map<String, BigDecimal> getBalancesByUserId(String userId) {
+        List<Wallet> wallets = walletRepository.findByUserId(userId);
+        Map<String, BigDecimal> balances = new HashMap<>();
+        for (Wallet w : wallets) {
+            String code = w.getCurrencyCode() == null ? "UNKNOWN" : w.getCurrencyCode();
+            balances.merge(code, w.getBalance(), BigDecimal::add);
+        }
+        return balances;
     }
     
 
