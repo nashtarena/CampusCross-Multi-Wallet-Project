@@ -1,10 +1,10 @@
 package com.campuscross.fx_service.service;
 
-import com.campuscross.fx_service.controller.QuoteResponse;
+import com.campuscross.fx_service.dto.FxRateDto;
 import com.campuscross.fx_service.delegate.FxCacheDelegate;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -21,60 +21,71 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class FxServiceTest {
 
-    private static final BigDecimal SPREAD = new BigDecimal("0.99");
+        private static final BigDecimal SPREAD = new BigDecimal("0.99");
 
-    @Mock
-    private FxCacheDelegate mockCacheDelegate;
+        @Mock
+        private FxCacheDelegate mockCacheDelegate;
 
-    @Mock
-    private KafkaTemplate<String, QuoteResponse> mockKafkaTemplate;
+        @Mock
+        private KafkaTemplate<String, FxRateDto> mockKafkaTemplate;
 
-    @InjectMocks
-    private FxService fxService;
+        @Mock
+        private com.campuscross.fx_service.service.FxRateFetcher mockRateFetcher;
 
-    @Test
-    void shouldApplySpreadCorrectlyToCustomerQuote() {
-        // ARRANGE
-        String from = "USD";
-        String to = "EUR";
-        BigDecimal realRate = new BigDecimal("1.000000");
+        private FxService fxService;
 
-        BigDecimal expectedCustomerRate = realRate
-                .multiply(SPREAD)
-                .setScale(6, RoundingMode.HALF_UP);
+        @BeforeEach
+        void setUp() {
+                // Default topic used in tests
+                fxService = new FxService(mockCacheDelegate, mockRateFetcher, mockKafkaTemplate, "fx.rates.realtime");
+        }
 
-        when(mockCacheDelegate.getRateWithCache(from, to))
-                .thenReturn(Optional.of(realRate));
+        @Test
+        void shouldApplySpreadCorrectlyToCustomerQuote() {
+                // ARRANGE
+                String from = "USD";
+                String to = "EUR";
+                BigDecimal realRate = new BigDecimal("1.000000");
 
-        // ACT
-        Optional<BigDecimal> result = fxService.getCustomerQuote(from, to);
+                BigDecimal expectedCustomerRate = realRate
+                                .multiply(SPREAD)
+                                .setScale(6, RoundingMode.HALF_UP);
 
-        // ASSERT
-        assertTrue(result.isPresent(), "Customer quote should be present");
+                when(mockCacheDelegate.getRateWithCache(from, to))
+                                .thenReturn(Optional.of(realRate));
 
-        // FIX: Use compareTo(BigDecimal) which returns 0 on equality, ensuring
-        // precision
-        assertEquals(0, expectedCustomerRate.compareTo(result.get()),
-                () -> "Spread not applied correctly. Expected: " + expectedCustomerRate
-                        + ", got: " + result.get());
+                // ACT
+                Optional<BigDecimal> result = fxService.getCustomerQuote(from, to);
 
-        verify(mockCacheDelegate, times(1)).getRateWithCache(from, to);
-    }
+                // ASSERT
+                assertTrue(result.isPresent(), "Customer quote should be present");
 
-    @Test
-    void scheduledJobShouldCallKafkaTemplate() {
-        // ARRANGE
-        when(mockCacheDelegate.getRateWithCache(anyString(), anyString()))
-                .thenReturn(Optional.of(new BigDecimal("0.50")));
+                // FIX: Use compareTo(BigDecimal) which returns 0 on equality, ensuring
+                // precision
+                assertEquals(0, expectedCustomerRate.compareTo(result.get()),
+                                () -> "Spread not applied correctly. Expected: " + expectedCustomerRate
+                                                + ", got: " + result.get());
 
-        // ACT: Manually trigger the publishing logic
-        fxService.scheduleAndPublishRates();
+                verify(mockCacheDelegate, times(1)).getRateWithCache(from, to);
+        }
 
-        // FIX: Verify the 3-argument send method used by your service
-        verify(mockKafkaTemplate, atLeastOnce())
-                .send(
-                        eq("fx-rate-updates"),
-                        anyString(),
-                        any(QuoteResponse.class));
-    }
+        @Test
+        void scheduledJobShouldCallKafkaTemplate() {
+                // ARRANGE
+                when(mockCacheDelegate.getRateWithCache(anyString(), anyString()))
+                                .thenReturn(Optional.of(new BigDecimal("0.50")));
+
+                // ARRANGE: construct service with explicit topic so constructor injection works
+                fxService = new FxService(mockCacheDelegate, mockRateFetcher, mockKafkaTemplate, "fx.rates.realtime");
+
+                // ACT: Manually trigger the publishing logic
+                fxService.scheduleAndPublishRates();
+
+                // Verify the send method was used with our configured topic and the DTO type
+                verify(mockKafkaTemplate, atLeastOnce())
+                                .send(
+                                                eq("fx.rates.realtime"),
+                                                anyString(),
+                                                any(FxRateDto.class));
+        }
 }

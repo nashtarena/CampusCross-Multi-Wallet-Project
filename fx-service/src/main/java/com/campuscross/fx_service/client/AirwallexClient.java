@@ -34,15 +34,13 @@ public class AirwallexClient {
      * Fetch live FX rate from Airwallex
      */
     public BigDecimal getCurrentRate(String fromCurrency, String toCurrency) {
-
         ensureAuthenticated();
 
-        // Required endpoint (exact path)
         String url = String.format(
-                "%s/api/v1/fx/rates/current?buy_currency=%s&sell_currency=%s&sell_amount=1",
+                "%s/api/v1/fx/rates/current?buy_currency=%s&sell_currency=%s",
                 config.getApiUrl(),
-                toCurrency,
-                fromCurrency);
+                toCurrency, // buy_currency
+                fromCurrency); // sell_currency
 
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
@@ -59,9 +57,21 @@ public class AirwallexClient {
             throw new RuntimeException("Empty rate response from Airwallex");
         }
 
-        BigDecimal rate = new BigDecimal(response.getBody().getRate());
+        AirwallexRateResponse body = response.getBody();
 
-        log.info("Airwallex rate {} → {} = {}", fromCurrency, toCurrency, rate);
+        // ✅ USE rate_details[0].rate, NOT the top-level rate
+        BigDecimal rate;
+        if (body.getRateDetails() != null && !body.getRateDetails().isEmpty()) {
+            rate = body.getRateDetails().get(0).getRate();
+            log.info("Using rate_details[0].rate: {}", rate);
+        } else {
+            // Fallback to top-level rate if rate_details is empty
+            rate = new BigDecimal(body.getRate());
+            log.warn("rate_details was empty, falling back to top-level rate: {}", rate);
+        }
+
+        log.info("Airwallex rate {} → {} = {} ({} per 1 {})",
+                fromCurrency, toCurrency, rate, toCurrency, fromCurrency);
 
         return rate;
     }
