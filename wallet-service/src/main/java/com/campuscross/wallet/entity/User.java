@@ -43,6 +43,9 @@ public class User {
     
     @Column(name = "campus_name")
     private String campusName;
+
+    @Column(name = "country")
+    private String country;
     
     @Enumerated(EnumType.STRING)
     private UserRole role;
@@ -138,6 +141,10 @@ public class User {
     
     public String getCampusName() {
         return campusName;
+    }
+
+    public String getCountry() {
+        return country;
     }
     
     public UserRole getRole() {

@@ -32,6 +32,7 @@ public class AuthController {
                     request.phoneNumber(),
                     request.studentId(),
                     request.campusName(),
+                    request.country(),
                     request.role()
             );
             

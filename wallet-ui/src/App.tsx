@@ -5,6 +5,7 @@ import { KYCTier1 } from './components/screens/KYCTier1';
 import { KYCTier2 } from './components/screens/KYCTier2';
 import { KYCStatusPolling } from './components/screens/KYCStatusPolling';
 import { Home } from './components/screens/Home';
+import { MerchantDashboard } from './components/screens/MerchantDashboard';
 import { P2PTransfer } from './components/screens/P2PTransfer';
 import { CurrencyConversion } from './components/screens/CurrencyConversion';
 import { CampusPayments } from './components/screens/CampusPayments';
@@ -30,6 +31,7 @@ type Screen =
   | 'admin' 
   | 'alerts' 
   | 'settings'
+  | 'merchant'
   | 'createWallet';
 
 interface AppContextType {
@@ -108,6 +110,9 @@ export default function App() {
             if (user.role === 'ADMIN') {
               console.log('✅ Routing to admin dashboard');
               setCurrentScreen('admin');
+            } else if (user.role === 'MERCHANT') {
+              console.log('✅ Routing to merchant dashboard');
+              setCurrentScreen('merchant');
             } else {
               console.log('❌ Routing to home page (role is not ADMIN)');
               setCurrentScreen('home');
@@ -169,6 +174,8 @@ export default function App() {
         );
       case 'home':
         return <Home onNavigate={(screen) => setCurrentScreen(screen as Screen)} />;
+      case 'merchant':
+        return <MerchantDashboard onNavigate={(screen) => setCurrentScreen(screen as Screen)} />;
       case 'conversion':
         return <CurrencyConversion onBack={() => setCurrentScreen('home')} />;
       case 'p2p':

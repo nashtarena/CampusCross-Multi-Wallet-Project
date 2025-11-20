@@ -22,7 +22,15 @@ export function Welcome({ onNext, onNavigateToHome }: WelcomeProps) {
 
   const handleSignIn = async () => {
     if (!signInData.studentId || !signInData.password) {
-      toast.error(`Please enter both ${signInData.role === 'ADMIN' ? 'admin ID' : 'student ID'} and password`);
+      toast.error(
+        `Please enter both ${
+          signInData.role === 'ADMIN'
+            ? 'admin ID'
+            : signInData.role === 'MERCHANT'
+              ? 'merchant ID'
+              : 'student ID'
+        } and password`
+      );
       return;
     }
 
@@ -192,11 +200,23 @@ export function Welcome({ onNext, onNavigateToHome }: WelcomeProps) {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="studentId">{signInData.role === 'ADMIN' ? 'Admin ID' : 'Student ID'}</Label>
+              <Label htmlFor="studentId">
+                {signInData.role === 'ADMIN'
+                  ? 'Admin ID'
+                  : signInData.role === 'MERCHANT'
+                    ? 'Merchant ID'
+                    : 'Student ID'}
+              </Label>
               <Input
                 id="studentId"
                 type="text"
-                placeholder={signInData.role === 'ADMIN' ? 'Enter your admin ID' : 'Enter your student ID'}
+                placeholder={
+                  signInData.role === 'ADMIN'
+                    ? 'Enter your admin ID'
+                    : signInData.role === 'MERCHANT'
+                      ? 'Enter your merchant ID'
+                      : 'Enter your student ID'
+                }
                 value={signInData.studentId}
                 onChange={(e) => setSignInData({ ...signInData, studentId: e.target.value })}
                 className="h-12 rounded-xl"
@@ -223,6 +243,7 @@ export function Welcome({ onNext, onNavigateToHome }: WelcomeProps) {
                 <SelectContent>
                   <SelectItem value="STUDENT">Student</SelectItem>
                   <SelectItem value="ADMIN">Admin</SelectItem>
+                  <SelectItem value="MERCHANT">Merchant</SelectItem>
                 </SelectContent>
               </Select>
             </div>
