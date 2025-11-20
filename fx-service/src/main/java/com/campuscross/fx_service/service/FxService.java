@@ -1,7 +1,7 @@
 package com.campuscross.fx_service.service;
 
-import com.campuscross.fx_service.controller.QuoteResponse; // Assumed location of your response DTO
 import com.campuscross.fx_service.delegate.FxCacheDelegate;
+import com.campuscross.fx_service.dto.FxRateDto;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,15 +26,18 @@ public class FxService {
     private final FxRateFetcher rateFetcher;
 
     // private final RestTemplate restTemplate;
-    private final KafkaTemplate<String, QuoteResponse> kafkaTemplate; // NEW FIELD
-    private static final String FX_RATE_TOPIC = "fx-rate-updates"; // Topic name
+    private final KafkaTemplate<String, FxRateDto> kafkaTemplate; // NEW FIELD
+    // use topic from properties via @Value
+    private final String fxRateTopic;
     private static final BigDecimal SPREAD = new BigDecimal("0.99"); // Your 1% profit multiplier
 
     // Constructor injection for both the client (e.g.) and the delegate
+
     public FxService(
             FxCacheDelegate cacheDelegate,
             FxRateFetcher rateFetcher,
-            KafkaTemplate<String, QuoteResponse> kafkaTemplate) {
+            KafkaTemplate<String, FxRateDto> kafkaTemplate,
+            @org.springframework.beans.factory.annotation.Value("${fx.kafka.rate-topic:fx.rates.realtime}") String fxRateTopic) {
 
         // 1. Caching Delegate
         this.cacheDelegate = cacheDelegate;
@@ -44,6 +47,7 @@ public class FxService {
 
         // 4. Messaging Client
         this.kafkaTemplate = kafkaTemplate;
+        this.fxRateTopic = fxRateTopic;
     }
 
     // MODIFIED CONSTRUCTOR: Now injects the RestTemplate AND KafkaTemplate
@@ -56,8 +60,24 @@ public class FxService {
     public Optional<BigDecimal> getCustomerQuote(String from, String to) {
         Optional<BigDecimal> realRate = cacheDelegate.getRateWithCache(from, to);
 
-        // If the realRate is present, apply the spread (0.99 for 1% profit)
-        return realRate.map(rate -> rate.multiply(SPREAD).setScale(6, RoundingMode.HALF_UP));
+        return realRate.map(rate -> {
+            BigDecimal correctedRate = rate;
+
+            // ✅ FIX 1: Invert USD → EUR and USD → GBP
+            if ("USD".equals(from) && ("EUR".equals(to) || "GBP".equals(to))) {
+                correctedRate = BigDecimal.ONE.divide(rate, 10, RoundingMode.HALF_UP);
+                log.info("Inverted USD→{}: {} → {}", to, rate, correctedRate);
+            }
+
+            // ✅ FIX 2: Invert all JPY → XXX pairs
+            if ("JPY".equals(from)) {
+                correctedRate = BigDecimal.ONE.divide(rate, 10, RoundingMode.HALF_UP);
+                log.info("Inverted JPY→{}: {} → {}", to, rate, correctedRate);
+            }
+
+            // Apply the spread (0.99 for 1% profit)
+            return correctedRate.multiply(SPREAD).setScale(6, RoundingMode.HALF_UP);
+        });
     }
 
     /**
@@ -83,13 +103,17 @@ public class FxService {
 
                 quoteOptional.ifPresent(customerRate -> {
                     try {
-                        // Create the message payload
-                        QuoteResponse message = new QuoteResponse(from, to, customerRate);
-                        String key = from + "-" + to;
+                        // Create the DTO payload matching consumer expectations
+                        FxRateDto dto = new FxRateDto();
+                        dto.setCurrencyPair(from + "/" + to);
+                        dto.setRateValue(customerRate);
+                        dto.setTimestamp(java.time.Instant.now());
 
-                        // Publish to Kafka
-                        kafkaTemplate.send(FX_RATE_TOPIC, key, message);
-                        log.debug("Published rate update: {} to {}", key, FX_RATE_TOPIC);
+                        String key = from + "/" + to;
+
+                        // Publish to configured Kafka topic
+                        kafkaTemplate.send(fxRateTopic, key, dto);
+                        log.debug("Published rate update: {} to {}", key, fxRateTopic);
                     } catch (Exception e) {
                         log.error("Error publishing rate for {}-{}: {}", from, to, e.getMessage());
                     }

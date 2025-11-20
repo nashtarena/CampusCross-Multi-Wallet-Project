@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '../ui/button';
 import { Card } from '../ui/card';
 import { Input } from '../ui/input';
@@ -6,6 +6,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Switch } from '../ui/switch';
 import { ArrowLeft, ArrowDownUp, TrendingUp, TrendingDown, Bell } from 'lucide-react';
 import { useAppContext } from '../../App';
+import { fxApi } from '../../services/fxApi';
+import { walletApi, Wallet } from '../../services/walletApi';
+import { toast } from 'sonner';
 
 interface CurrencyConversionProps {
   onBack: () => void;
@@ -35,8 +38,68 @@ export function CurrencyConversion({ onBack }: CurrencyConversionProps) {
 
   const fromCurrencyData = currencies.find(c => c.code === fromCurrency);
   const toCurrencyData = currencies.find(c => c.code === toCurrency);
-  const rate = 0.92; // Mock rate
-  const convertedAmount = parseFloat(amount || '0') * rate;
+  const [rate, setRate] = useState<number | null>(null);
+  const [loadingRate, setLoadingRate] = useState(false);
+  const [rateError, setRateError] = useState<string | null>(null);
+  const [wallets, setWallets] = useState<Wallet[]>([]);
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  const convertedAmount = rate ? parseFloat(amount || '0') * rate : 0;
+
+  useEffect(() => {
+    // load user's wallets so we can check balances and wallet ids
+    const loadWallets = async () => {
+      try {
+        const userStr = localStorage.getItem('user');
+        if (!userStr) return;
+        const user = JSON.parse(userStr);
+        const userWallets = await walletApi.getUserWallets(user.id);
+        setWallets(userWallets);
+      } catch (err) {
+        console.error('Failed to load wallets', err);
+      }
+    };
+    loadWallets();
+
+    let mounted = true;
+    async function fetchRate() {
+      setLoadingRate(true);
+      setRateError(null);
+      try {
+        const resp = await fxApi.getQuote(fromCurrency, toCurrency);
+        if (!mounted) return;
+        setRate(Number(resp.rate));
+      } catch (err: any) {
+        if (!mounted) return;
+        setRateError(err.message || 'Failed to fetch rate');
+        setRate(null);
+      } finally {
+        if (mounted) setLoadingRate(false);
+      }
+    }
+
+    // Only fetch when currencies differ
+    if (fromCurrency && toCurrency && fromCurrency !== toCurrency) {
+      fetchRate();
+    } else if (fromCurrency === toCurrency) {
+      setRate(1);
+    }
+
+    return () => { mounted = false; };
+  }, [fromCurrency, toCurrency]);
+
+  // Refresh wallets helper
+  const refreshWallets = async () => {
+    try {
+      const userStr = localStorage.getItem('user');
+      if (!userStr) return;
+      const user = JSON.parse(userStr);
+      const userWallets = await walletApi.getUserWallets(user.id);
+      setWallets(userWallets);
+    } catch (err) {
+      console.error('Failed to refresh wallets', err);
+    }
+  };
 
   const bgColor = theme === 'dark' ? 'from-slate-800 to-slate-900' : 'from-slate-50 to-slate-100';
 
@@ -136,9 +199,15 @@ export function CurrencyConversion({ onBack }: CurrencyConversionProps) {
               </div>
             </div>
             <p className="text-gray-900">
-              1 {fromCurrency} = {rate.toFixed(4)} {toCurrency}
+              {loadingRate ? (
+                'Loading rate...'
+              ) : rateError ? (
+                <span className="text-red-600">{rateError}</span>
+              ) : (
+                <>1 {fromCurrency} = {rate?.toFixed(6)} {toCurrency}</>
+              )}
             </p>
-            <p className="text-xs text-gray-500 mt-1">Updated 2 minutes ago</p>
+            <p className="text-xs text-gray-500 mt-1">{loadingRate ? 'Fetching latest rate' : 'Live rate from FX service'}</p>
           </div>
 
           {/* Rate Alert */}
@@ -160,8 +229,66 @@ export function CurrencyConversion({ onBack }: CurrencyConversionProps) {
           <Button 
             className="w-full h-12 rounded-xl"
             style={{ background: '#607D8B' }}
+            onClick={async () => {
+              // Basic validation
+              const amountNum = Number(amount || 0);
+              if (!amountNum || amountNum <= 0) {
+                toast.error('Enter a valid amount to convert');
+                return;
+              }
+
+              if (!rate) {
+                toast.error('No exchange rate available');
+                return;
+              }
+
+              // Find source wallet
+              const sourceWallet = wallets.find(w => w.currencyCode === fromCurrency);
+              if (!sourceWallet) {
+                toast.error(`No ${fromCurrency} wallet found`);
+                return;
+              }
+
+              // Check balance
+              if ((sourceWallet.balance || 0) < amountNum) {
+                toast.error('Insufficient funds in source wallet');
+                return;
+              }
+
+              setIsProcessing(true);
+              try {
+                // Determine or create target wallet
+                let targetWallet = wallets.find(w => w.currencyCode === toCurrency);
+                if (!targetWallet) {
+                  const created = await walletApi.createWallet('Converted Wallet', toCurrency, false);
+                  targetWallet = created;
+                  // optimistically add to local list
+                  setWallets(prev => [...prev, created]);
+                }
+
+                // Compute converted amount (use rate as to-per-1-from)
+                const converted = Number((amountNum * (rate || 0)).toFixed(6));
+
+                // Deduct from source
+                await walletApi.deductFunds(sourceWallet.id, amountNum, fromCurrency);
+
+                // Add to target
+                await walletApi.addFunds(targetWallet.id, converted, toCurrency);
+
+                toast.success('Conversion completed successfully');
+
+                // Refresh wallets/balances
+                await refreshWallets();
+              } catch (err: any) {
+                console.error('Conversion error', err);
+                toast.error(err?.message || 'Conversion failed');
+              } finally {
+                setIsProcessing(false);
+              }
+            }}
+            disabled={isProcessing}
           >
-            Convert Now
+            {isProcessing ? 'Processing...' : 'Convert Now'}
           </Button>
         </Card>
       </div>
