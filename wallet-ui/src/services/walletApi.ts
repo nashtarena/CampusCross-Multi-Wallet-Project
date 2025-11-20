@@ -76,6 +76,7 @@ export interface AuthRequest {
   studentId: string;
   campusName?: string;
   role?: string;
+  country?: string;
 }
 
 export interface AuthResponse {

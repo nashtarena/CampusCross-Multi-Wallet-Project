@@ -47,7 +47,7 @@ public class AuthenticationService {
     
     @Transactional
     public User registerUser(String email, String password, String firstName, String lastName, 
-                           String phoneNumber, String studentId, String campusName, String role) {
+                           String phoneNumber, String studentId, String campusName, String country, String role) {
         
         if (userRepository.existsByEmail(email)) {
             throw new RuntimeException("Email already registered");
@@ -69,6 +69,7 @@ public class AuthenticationService {
                 .phoneNumber(phoneNumber)
                 .studentId(studentId)
                 .campusName(campusName)
+                .country(country)
                 .role(determineUserRole(role))
                 .status(User.UserStatus.PENDING_VERIFICATION)
                 .kycStatus(User.KycStatus.NOT_STARTED)

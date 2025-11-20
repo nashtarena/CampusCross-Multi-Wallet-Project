@@ -25,15 +25,21 @@ export function SignUp({ onBack, onNext, onAdminSuccess }: SignUpProps) {
     password: '',
     confirmPassword: '',
     role: 'STUDENT',
-    campusName: ''
+    campusName: '',
+    country: ''
   });
 
   const handleContinue = async () => {
     // Validation
     const requiredFields = [formData.fullName, formData.email, formData.phone, formData.studentId, formData.password, formData.confirmPassword, formData.campusName];
-    
+
     if (requiredFields.some(field => !field)) {
       toast.error('Please fill in all fields');
+      return;
+    }
+
+    if (formData.role === 'MERCHANT' && !formData.country) {
+      toast.error('Please enter your country');
       return;
     }
 
@@ -48,7 +54,7 @@ export function SignUp({ onBack, onNext, onAdminSuccess }: SignUpProps) {
     }
 
     setIsLoading(true);
-    
+
     try {
       const authRequest: AuthRequest = {
         email: formData.email,
@@ -58,16 +64,17 @@ export function SignUp({ onBack, onNext, onAdminSuccess }: SignUpProps) {
         phoneNumber: formData.phone,
         studentId: formData.studentId,
         campusName: formData.campusName || undefined,
-        role: formData.role
+        role: formData.role,
+        country: formData.role === 'MERCHANT' ? formData.country : undefined
       };
 
       const response = await authApi.register(authRequest);
-      
+
       // Store user data and token
       setUserName(response.fullName);
       setUserPassword(formData.password);
       setUserId(parseInt(response.userId));
-      
+
       // Store token in localStorage for future API calls
       localStorage.setItem('authToken', response.token);
       localStorage.setItem('user', JSON.stringify({
@@ -78,9 +85,9 @@ export function SignUp({ onBack, onNext, onAdminSuccess }: SignUpProps) {
         status: response.status,
         kycStatus: response.kycStatus || 'NOT_STARTED'
       }));
-      
+
       toast.success('Account created successfully!');
-      
+
       // If admin, bypass KYC and go directly to home
       if (response.role === 'ADMIN') {
         // Admins don't need KYC, go directly to home
@@ -176,6 +183,7 @@ export function SignUp({ onBack, onNext, onAdminSuccess }: SignUpProps) {
                 >
                   <option value="STUDENT">Student</option>
                   <option value="ADMIN">Administrator</option>
+                  <option value="MERCHANT">Campus Merchant</option>
                 </select>
               </div>
             </div>
@@ -196,16 +204,45 @@ export function SignUp({ onBack, onNext, onAdminSuccess }: SignUpProps) {
               </div>
             </div>
 
+            {formData.role === 'MERCHANT' && (
+              <div className="space-y-2">
+                <Label htmlFor="country" className="text-gray-700">Business Country</Label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                  <Input
+                    id="country"
+                    type="text"
+                    placeholder="Enter your country"
+                    className="pl-10 h-12 rounded-xl border-gray-200"
+                    value={formData.country}
+                    onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+                  />
+                </div>
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label htmlFor="studentId" className="text-gray-700">
-                {formData.role === 'ADMIN' ? 'Admin ID' : 'Student ID'}
+                {formData.role === 'ADMIN'
+                  ? 'Admin ID'
+                  : formData.role === 'STUDENT'
+                    ? 'Student ID'
+                    : formData.role === 'MERCHANT'
+                      ? 'Merchant ID'
+                      : ''}
               </Label>
               <div className="relative">
                 <UserCheck className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
                 <Input
                   id="studentId"
                   type="text"
-                  placeholder={formData.role === 'ADMIN' ? 'Enter Your Admin ID' : 'Enter Your Student ID'}
+                  placeholder={formData.role === 'ADMIN'
+                    ? 'Enter Your Admin ID'
+                    : formData.role === 'STUDENT'
+                      ? 'Enter Your Student ID'
+                      : formData.role === 'MERCHANT'
+                        ? 'Enter Your Merchant ID'
+                        : ''}
                   className="pl-10 h-12 rounded-xl border-gray-200"
                   value={formData.studentId}
                   onChange={(e) => setFormData({ ...formData, studentId: e.target.value })}
@@ -254,7 +291,7 @@ export function SignUp({ onBack, onNext, onAdminSuccess }: SignUpProps) {
 
       {/* Bottom Button */}
       <div className="p-6">
-        <Button 
+        <Button
           onClick={handleContinue}
           disabled={isLoading}
           className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl h-12"

@@ -8,5 +8,6 @@ public record RegisterRequest(
         String phoneNumber,
         String studentId,
         String campusName,
+        String country,
         String role
 ) {}
