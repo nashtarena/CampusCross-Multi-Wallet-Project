@@ -20,10 +20,10 @@ import java.util.Map;
 @RequiredArgsConstructor
 @Slf4j
 public class BankingController {
-    
+
     private final BankingService bankingService;
     private final JwtUtil jwtUtil;
-    
+
     @PostMapping("/deposit")
     public ResponseEntity<?> deposit(@RequestBody DepositRequest request, HttpServletRequest httpRequest) {
         try {
@@ -39,31 +39,30 @@ public class BankingController {
 
             log.info("Deposit requested: body.userId={} token.userId={}", request.userId(), tokenUserId);
 
-                // Prefer the userId from the validated JWT when present; fall back to body.userId
-                String effectiveUserId = tokenUserId != null ? tokenUserId : request.userId();
-                log.info("Effective userId for deposit: {}", effectiveUserId);
+            // Prefer the userId from the validated JWT when present; fall back to
+            // body.userId
+            String effectiveUserId = tokenUserId != null ? tokenUserId : request.userId();
+            log.info("Effective userId for deposit: {}", effectiveUserId);
 
-                Transaction transaction = bankingService.depositFromBank(
+            Transaction transaction = bankingService.depositFromBank(
                     effectiveUserId,
                     request.amount(),
-                    request.currency()
-                );
-            
-                return ResponseEntity.ok(new DepositResponseWithUser(
+                    request.currency());
+
+            return ResponseEntity.ok(new DepositResponseWithUser(
                     true,
                     "Deposit successful",
                     transaction.getTransactionId(),
                     transaction.getAmount(),
                     transaction.getCurrencyCode(),
                     "COMPLETED",
-                    request.userId()
-                ));
+                    request.userId()));
         } catch (Exception e) {
             log.error("Deposit failed", e);
             return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
         }
     }
-    
+
     @PostMapping("/withdraw")
     public ResponseEntity<?> withdraw(@RequestBody WithdrawalRequest request) {
         try {
@@ -72,9 +71,8 @@ public class BankingController {
                     request.amount(),
                     request.currency(),
                     request.bankAccountNumber(),
-                    request.bankName()
-            );
-            
+                    request.bankName());
+
             return ResponseEntity.ok(new WithdrawalResponse(
                     true,
                     "Withdrawal successful",
@@ -82,14 +80,13 @@ public class BankingController {
                     transaction.getAmount(),
                     transaction.getCurrencyCode(),
                     "COMPLETED",
-                    request.bankAccountNumber()
-            ));
+                    request.bankAccountNumber()));
         } catch (Exception e) {
             log.error("Withdrawal failed", e);
             return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
         }
     }
-    
+
     @GetMapping("/deposit-instructions/{userId}")
     public ResponseEntity<?> getDepositInstructions(@PathVariable String userId) {
         try {
@@ -100,7 +97,7 @@ public class BankingController {
             return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
         }
     }
-    
+
     @GetMapping("/withdrawal-instructions/{userId}")
     public ResponseEntity<?> getWithdrawalInstructions(@PathVariable String userId) {
         try {
@@ -111,42 +108,42 @@ public class BankingController {
             return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
         }
     }
-    
+
     // DTOs
     public record DepositRequest(
             String userId,
             BigDecimal amount,
-            String currency
-    ) {}
-    
+            String currency) {
+    }
+
     public record WithdrawalRequest(
             String userId,
             BigDecimal amount,
             String currency,
             String bankAccountNumber,
-            String bankName
-    ) {}
-    
+            String bankName) {
+    }
+
     public record DepositResponse(
             boolean success,
             String message,
             String transactionId,
             BigDecimal amount,
             String currency,
-            String status
-    ) {}
+            String status) {
+    }
 
-        // Added userId to response for debugging/confirmation
-        public record DepositResponseWithUser(
+    // Added userId to response for debugging/confirmation
+    public record DepositResponseWithUser(
             boolean success,
             String message,
             String transactionId,
             BigDecimal amount,
             String currency,
             String status,
-            String userId
-        ) {}
-    
+            String userId) {
+    }
+
     public record WithdrawalResponse(
             boolean success,
             String message,
@@ -154,10 +151,10 @@ public class BankingController {
             BigDecimal amount,
             String currency,
             String status,
-            String bankAccountNumber
-    ) {}
-    
+            String bankAccountNumber) {
+    }
+
     public record ErrorResponse(
-            String error
-    ) {}
+            String error) {
+    }
 }
