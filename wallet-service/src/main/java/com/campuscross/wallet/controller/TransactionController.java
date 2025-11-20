@@ -55,21 +55,21 @@ public class TransactionController {
                 throw new RuntimeException("Recipient identifier cannot be empty");
             }
 
-                // Find recipient user (studentId -> phoneNumber fallback)
-                User recipient = findRecipient(identifier);
+            // Find recipient user (studentId -> phoneNumber fallback)
+            User recipient = findRecipient(identifier);
 
-                // Get source wallet to determine currency
-                Wallet sourceWallet = walletRepository.findById(request.sourceWalletId())
+            // Get source wallet to determine currency
+            Wallet sourceWallet = walletRepository.findById(request.sourceWalletId())
                     .orElseThrow(() -> new RuntimeException("Source wallet not found"));
-                String currency = sourceWallet.getCurrencyCode();
+            String currency = sourceWallet.getCurrencyCode();
 
-                // Find recipient wallet with same currency or create one
-                Wallet targetWallet = walletRepository
+            // Find recipient wallet with same currency or create one
+            Wallet targetWallet = walletRepository
                     .findByUserIdAndCurrencyCode(recipient.getId(), currency)
                     .orElseGet(() -> walletService.createWallet(recipient,
-                        String.format("%s wallet", currency), Wallet.WalletType.PERSONAL, currency, false));
+                            String.format("%s wallet", currency), Wallet.WalletType.PERSONAL, currency, false));
 
-                Transaction transaction = transactionService.createP2PTransfer(
+            Transaction transaction = transactionService.createP2PTransfer(
                     request.sourceWalletId(),
                     targetWallet.getWalletAddress(),
                     request.amount(),
