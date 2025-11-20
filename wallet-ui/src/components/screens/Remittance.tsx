@@ -8,6 +8,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { ArrowLeft, Building2, Clock, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Progress } from '../ui/progress';
 import { useAppContext } from '../../App';
+import { useNavigate } from 'react-router-dom';
+
 
 interface RemittanceProps {
   onBack: () => void;
@@ -25,6 +27,20 @@ export function Remittance({ onBack }: RemittanceProps) {
   const [amount, setAmount] = useState('');
   const { theme } = useAppContext();
 
+  const { role } = useAppContext(); 
+  const navigate = useNavigate();
+
+  const handleBack = () => {
+    const routes: Record<string, string> = {
+      MERCHANT: "/merchant-dashboard",
+      ADMIN: "/admin-panel",
+      STUDENT: "/home"
+    };
+
+    navigate(routes[role] || "/home");
+  };
+
+
   const fee = parseFloat(amount || '0') * 0.01; // 1% fee
   const totalAmount = parseFloat(amount || '0') + fee;
 
@@ -35,7 +51,7 @@ export function Remittance({ onBack }: RemittanceProps) {
       {/* Header */}
       <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-6 pb-8 rounded-b-3xl">
         <div className="flex items-center gap-3 mb-4">
-          <button onClick={onBack} className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center">
+          <button onClick={handleBack} className="w-10 h-10 rounded-full bg-white/10 ...">
             <ArrowLeft size={20} className="text-white" />
           </button>
           <div>

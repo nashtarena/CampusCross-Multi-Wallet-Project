@@ -135,10 +135,6 @@ export function WalletCard({ wallet, isBalanceHidden = false, onDelete, onNaviga
           </div>
           
           <div className="flex gap-2">
-            <button className="flex-1 bg-white/20 backdrop-blur-sm hover:bg-white/30 transition-colors rounded-lg py-2 px-3 flex items-center justify-center gap-2">
-              <ArrowUpRight size={16} />
-              <span className="text-sm">Send</span>
-            </button>
             <button 
               className="flex-1 bg-white/20 backdrop-blur-sm hover:bg-white/30 transition-colors rounded-lg py-2 px-3 flex items-center justify-center gap-2"
               onClick={() => setShowReceiveDialog(true)}
