@@ -11,7 +11,6 @@ import org.springframework.http.ResponseEntity;
 
 import java.math.BigDecimal;
 
-@CrossOrigin(origins = "http://localhost:3000")
 @RestController
 @RequestMapping("/api/v1/fx") // This sets the base URL for this class
 public class FxController {
