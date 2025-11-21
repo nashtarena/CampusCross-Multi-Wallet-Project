@@ -8,7 +8,6 @@ import { Home } from "./components/screens/Home";
 import MerchantDashboard from "./components/screens/MerchantDashboard";
 import { P2PTransfer } from "./components/screens/P2PTransfer";
 import { CurrencyConversion } from "./components/screens/CurrencyConversion";
-import { CampusPayments } from "./components/screens/CampusPayments";
 import { Remittance } from "./components/screens/Remittance";
 import { AdminPanel } from "./components/screens/AdminPanel";
 import { RateAlerts } from "./components/screens/RateAlerts";
@@ -63,7 +62,7 @@ export default function App() {
   const [userPassword, setUserPassword] = useState(
     () => localStorage.getItem("userPassword") || ""
   );
-  const [userId, setUserId] = useState(9002);
+  const [userId, setUserId] = useState(localStorage.getItem("userId") ? parseInt(localStorage.getItem("userId") as string) : 0);
   const [accessToken, setAccessToken] = useState("");
   const [theme, setTheme] = useState<"light" | "dark">(
     () => (localStorage.getItem("theme") as "light" | "dark") || "light"
@@ -249,12 +248,10 @@ export default function App() {
         return <CurrencyConversion onBack={() => setCurrentScreen("home")} />;
       case "p2p":
         return <P2PTransfer onBack={() => setCurrentScreen("home")} />;
-      case "campus":
-        return <CampusPayments onBack={() => setCurrentScreen("home")} />;
       case "remittance":
         return <Remittance onBack={() => setCurrentScreen("home")} />;
       case "admin":
-        return <AdminPanel onBack={() => setCurrentScreen("home")} />;
+        return <AdminPanel />;
       case "alerts":
         return (
           <RateAlerts onBack={() => setCurrentScreen("home")} userId={userId} />
