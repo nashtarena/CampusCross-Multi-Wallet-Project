@@ -86,6 +86,7 @@ export interface AuthResponse {
   role: string;
   status: string;
   kycStatus?: string;
+  campusName?: string;
   message: string;
   token: string;
 }
@@ -533,5 +534,33 @@ export const transactionApi = {
     }
 
     return response.json();
-  }
+  },
+};
+
+export const userApi = {
+    getUsersByCollege: async (campusName: string): Promise<any[]> => {
+      const response = await fetch(`${WALLET_API_BASE_URL}/users/by-college/${encodeURIComponent(campusName)}`, {
+        headers: getAuthHeaders()
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to fetch users: ${errorText}`);
+      }
+
+      return response.json();
+    },
+
+    getCurrentUserProfile: async (): Promise<any> => {
+      const response = await fetch(`${WALLET_API_BASE_URL}/users/profile`, {
+        headers: getAuthHeaders()
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to fetch profile: ${errorText}`);
+      }
+
+      return response.json();
+    },
 };

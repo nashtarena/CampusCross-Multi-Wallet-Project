@@ -17,10 +17,10 @@ import jakarta.servlet.http.HttpServletRequest;
 @RequiredArgsConstructor
 @Slf4j
 public class AuthController {
-    
+
     private final AuthenticationService authenticationService;
     private final JwtUtil jwtUtil;
-    
+
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
         try {
@@ -33,11 +33,10 @@ public class AuthController {
                     request.studentId(),
                     request.campusName(),
                     request.country(),
-                    request.role()
-            );
-            
+                    request.role());
+
             String token = jwtUtil.generateToken(user.getEmail(), user.getId(), user.getRole().toString());
-            
+
             return ResponseEntity.ok(new AuthResponse(
                     user.getId(),
                     user.getEmail(),
@@ -45,23 +44,23 @@ public class AuthController {
                     user.getRole().toString(),
                     user.getStatus().toString(),
                     user.getKycStatus() != null ? user.getKycStatus().toString() : "NOT_STARTED",
-                    "User registered successfully",
-                    token
-            ));
+                    user.getCampusName(), // ADD THIS
+                    "Login successful",
+                    token));
         } catch (Exception e) {
             log.error("Registration failed", e);
             return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
         }
     }
-    
+
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest request, HttpServletRequest httpRequest) {
         try {
             String ipAddress = getClientIpAddress(httpRequest);
             User user = authenticationService.authenticateUser(request.studentId(), request.password(), ipAddress);
-            
+
             String token = jwtUtil.generateToken(user.getEmail(), user.getId(), user.getRole().toString());
-            
+
             return ResponseEntity.ok(new AuthResponse(
                     user.getId(),
                     user.getEmail(),
@@ -69,15 +68,15 @@ public class AuthController {
                     user.getRole().toString(),
                     user.getStatus().toString(),
                     user.getKycStatus() != null ? user.getKycStatus().toString() : "NOT_STARTED",
+                    user.getCampusName(), // ADD THIS
                     "Login successful",
-                    token
-            ));
+                    token));
         } catch (Exception e) {
             log.error("Login failed", e);
             return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
         }
     }
-    
+
     @PostMapping("/verify-email")
     public ResponseEntity<?> verifyEmail(@RequestBody EmailVerificationRequest request) {
         try {
@@ -88,7 +87,7 @@ public class AuthController {
             return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
         }
     }
-    
+
     @PostMapping("/reset-password")
     public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequest request) {
         try {
@@ -99,7 +98,7 @@ public class AuthController {
             return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
         }
     }
-    
+
     private String getClientIpAddress(HttpServletRequest request) {
         String xForwardedFor = request.getHeader("X-Forwarded-For");
         if (xForwardedFor != null && !xForwardedFor.isEmpty()) {
@@ -107,22 +106,22 @@ public class AuthController {
         }
         return request.getRemoteAddr();
     }
-    
+
     // Request/Response DTOs
     public record LoginRequest(
             String studentId,
-            String password
-    ) {}
-    
+            String password) {
+    }
+
     public record EmailVerificationRequest(
-            String token
-    ) {}
-    
+            String token) {
+    }
+
     public record ResetPasswordRequest(
             String email,
-            String newPassword
-    ) {}
-    
+            String newPassword) {
+    }
+
     public record AuthResponse(
             String userId,
             String email,
@@ -130,15 +129,16 @@ public class AuthController {
             String role,
             String status,
             String kycStatus,
+            String campusName, // ADD THIS
             String message,
-            String token
-    ) {}
-    
+            String token) {
+    }
+
     public record SuccessResponse(
-            String message
-    ) {}
-    
+            String message) {
+    }
+
     public record ErrorResponse(
-            String error
-    ) {}
+            String error) {
+    }
 }
