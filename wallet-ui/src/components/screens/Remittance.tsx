@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { ArrowLeft, Building2, Clock, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 import { Progress } from '../ui/progress';
 
-const API_BASE_URL = 'http://localhost:8085/api';
+const API_BASE_URL = 'https://campuscross-multi-wallet-latest.onrender.com/api';
 
 interface RemittanceProps {
   onBack: () => void;

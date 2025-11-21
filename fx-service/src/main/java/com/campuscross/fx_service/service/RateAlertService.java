@@ -1,9 +1,7 @@
 package com.campuscross.fx_service.service;
 
-import com.campuscross.fx_service.kafka.KafkaProducerService;
 import com.campuscross.fx_service.model.RateAlert;
 import com.campuscross.fx_service.repository.RateAlertRepository;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,14 +17,11 @@ public class RateAlertService {
     // Define a cooldown period (e.g., 60 minutes) to prevent users from being
     // spammed
     private static final long COOLDOWN_MINUTES = 60;
-    private static final String NOTIFICATION_TOPIC = "notification.fx.alerts"; // Topic for Developer C
 
     private final RateAlertRepository repository;
-    private final KafkaProducerService kafkaProducer;
 
-    public RateAlertService(RateAlertRepository repository, KafkaProducerService kafkaProducer) {
+    public RateAlertService(RateAlertRepository repository) {
         this.repository = repository;
-        this.kafkaProducer = kafkaProducer;
     }
 
     // --- CORE MONITORING LOGIC (Called by Kafka Consumer) ---
@@ -68,20 +63,19 @@ public class RateAlertService {
 
     private void triggerAlert(RateAlert alert, BigDecimal currentRate) {
         // 1. Update Alert Status in the database to prevent immediate re-triggering
-        alert.setStatus(RateAlert.AlertStatus.TRIGGERED); // You might switch this to ACTIVE later if it should
-                                                          // immediately reset
+        alert.setStatus(RateAlert.AlertStatus.TRIGGERED);
         alert.setLastTriggeredAt(Instant.now());
         repository.save(alert);
 
-        // 2. Publish to Kafka for Notification Service (Developer C)
+        // 2. Log the alert (replace with email/SMS notification if needed)
         String alertMessage = String.format(
                 "FX Alert triggered: %s rate %.4f is now %s %.4f. UserID: %d",
                 alert.getCurrencyPair(), currentRate,
                 alert.getDirection(), alert.getThresholdValue(),
                 alert.getUserId());
 
-        // Use the Kafka Producer service to send the event
-        kafkaProducer.sendMessage(NOTIFICATION_TOPIC, String.valueOf(alert.getUserId()), alertMessage);
+        System.out.println("ALERT: " + alertMessage);
+        // TODO: Implement email/SMS notification here if needed
     }
 
     // --- CRUD METHODS (Required by Controller) ---
