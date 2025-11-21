@@ -1,6 +1,5 @@
 C:\Users\DELL\Downloads\CampusCross-Multi-Wallet\wallet-service\src\main\java\com\campuscross\wallet\config\CorsConfig.java
 C:\Users\DELL\Downloads\CampusCross-Multi-Wallet\wallet-service\src\main\java\com\campuscross\wallet\config\JwtAuthenticationFilter.java
-C:\Users\DELL\Downloads\CampusCross-Multi-Wallet\wallet-service\src\main\java\com\campuscross\wallet\config\MailConfig.java
 C:\Users\DELL\Downloads\CampusCross-Multi-Wallet\wallet-service\src\main\java\com\campuscross\wallet\config\SecurityConfig.java
 C:\Users\DELL\Downloads\CampusCross-Multi-Wallet\wallet-service\src\main\java\com\campuscross\wallet\controller\AuthController.java
 C:\Users\DELL\Downloads\CampusCross-Multi-Wallet\wallet-service\src\main\java\com\campuscross\wallet\controller\BankingController.java
@@ -24,7 +23,6 @@ C:\Users\DELL\Downloads\CampusCross-Multi-Wallet\wallet-service\src\main\java\co
 C:\Users\DELL\Downloads\CampusCross-Multi-Wallet\wallet-service\src\main\java\com\campuscross\wallet\repository\WalletRepository.java
 C:\Users\DELL\Downloads\CampusCross-Multi-Wallet\wallet-service\src\main\java\com\campuscross\wallet\service\AuthenticationService.java
 C:\Users\DELL\Downloads\CampusCross-Multi-Wallet\wallet-service\src\main\java\com\campuscross\wallet\service\BankingService.java
-C:\Users\DELL\Downloads\CampusCross-Multi-Wallet\wallet-service\src\main\java\com\campuscross\wallet\service\EmailService.java
 C:\Users\DELL\Downloads\CampusCross-Multi-Wallet\wallet-service\src\main\java\com\campuscross\wallet\service\FraudDetectionService.java
 C:\Users\DELL\Downloads\CampusCross-Multi-Wallet\wallet-service\src\main\java\com\campuscross\wallet\service\NotificationService.java
 C:\Users\DELL\Downloads\CampusCross-Multi-Wallet\wallet-service\src\main\java\com\campuscross\wallet\service\TransactionService.java

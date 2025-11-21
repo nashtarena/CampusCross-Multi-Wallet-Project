@@ -22,7 +22,6 @@ public class AuthenticationService {
     
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-    private final EmailService emailService;
     private final WalletService walletService;
     
     private static final int MAX_LOGIN_ATTEMPTS = 5;
@@ -79,10 +78,6 @@ public class AuthenticationService {
         
         // Create default wallet for user
         walletService.createDefaultWallet(user);
-        
-        // Send verification email
-        emailService.sendVerificationEmail(user);
-        
         log.info("User registered successfully: {}", email);
         return user;
     }

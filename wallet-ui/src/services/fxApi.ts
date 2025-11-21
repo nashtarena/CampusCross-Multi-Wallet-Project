@@ -1,4 +1,4 @@
-const FX_API_BASE_URL = import.meta.env.VITE_FX_API_URL || 'http://localhost:8080/api/v1/fx';
+const FX_API_BASE_URL = "https://fx-service.onrender.com";
 
 export interface QuoteResponse {
   from: string;

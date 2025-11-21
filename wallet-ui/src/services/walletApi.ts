@@ -1,4 +1,4 @@
-const WALLET_API_BASE_URL = import.meta.env.VITE_WALLET_API_URL || 'http://localhost:8085/api';
+const WALLET_API_BASE_URL = "https://wallet-service-ydmq.onrender.com";
 
 // Helper function to get headers with JWT token
 const getAuthHeaders = () => {
