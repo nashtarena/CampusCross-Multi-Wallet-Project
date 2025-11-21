@@ -85,8 +85,8 @@ export interface AuthResponse {
   fullName: string;
   role: string;
   status: string;
-  kycStatus?: string;
-  campusName?: string;
+  kycStatus: string;
+  campusName: string;
   message: string;
   token: string;
 }
@@ -203,7 +203,7 @@ export const walletApi = {
     return response.json();
   },
 
-  getUserWallets: async (userId: number): Promise<Wallet[]> => {
+  getUserWallets: async (userId: string | number): Promise<Wallet[]> => {
     const response = await fetch(`${WALLET_API_BASE_URL}/wallets/user/${userId}`, {
       headers: getAuthHeaders()
     });
@@ -216,7 +216,7 @@ export const walletApi = {
     return response.json();
   },
 
-  getDefaultWallet: async (userId: number): Promise<Wallet> => {
+  getDefaultWallet: async (userId: string | number): Promise<Wallet> => {
     const response = await fetch(`${WALLET_API_BASE_URL}/wallets/user/${userId}/default`, {
       headers: getAuthHeaders()
     });
@@ -538,8 +538,15 @@ export const transactionApi = {
 };
 
 export const userApi = {
-    getUsersByCollege: async (campusName: string): Promise<any[]> => {
-      const response = await fetch(`${WALLET_API_BASE_URL}/users/by-college/${encodeURIComponent(campusName)}`, {
+    getUsersByCollege: async (campusName: string, role?: string): Promise<any[]> => {
+      // Build URL with optional role parameter
+      let url = `${WALLET_API_BASE_URL}/users/by-college/${encodeURIComponent(campusName)}`;
+      
+      if (role) {
+        url += `?role=${encodeURIComponent(role)}`;
+      }
+      
+      const response = await fetch(url, {
         headers: getAuthHeaders()
       });
 
