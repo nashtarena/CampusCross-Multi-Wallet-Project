@@ -1,4 +1,4 @@
-package com.campuscross.fx_service.config;
+package com.campuscross.wallet.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
