@@ -46,7 +46,8 @@
             "sonner": "^2.0.3",
             "tailwind-merge": "*",
             "vaul": "^1.1.2",
-            "zustand": "^5.0.8"
+            "zustand": "^5.0.8",
+            "react-router-dom": "^6.18.0"
       },
       "devDependencies": {
             "@types/node": "^20.19.25",

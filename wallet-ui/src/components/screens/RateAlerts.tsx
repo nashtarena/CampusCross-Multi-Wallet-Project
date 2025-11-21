@@ -46,7 +46,7 @@ interface FrontendAlert {
 
 interface RateAlertsProps {
   onBack: () => void;
-  userId?: number; // Make it optional with a default
+  userId?: number; // optional; component will fallback to localStorage.user if not provided
 }
 
 // API Service Functions
@@ -156,8 +156,27 @@ const transformFrontendToBackend = (
   };
 };
 
-export function RateAlerts({ onBack, userId = 1 }: RateAlertsProps) {
-  // userId defaults to 1 for development (before auth is implemented)
+export function RateAlerts({ onBack, userId }: RateAlertsProps) {
+  // Resolve the user id: prefer the prop, otherwise read from localStorage.user
+  const resolveUserId = (): number | null => {
+    if (typeof userId === "number" && !Number.isNaN(userId) && userId > 0) return userId;
+    try {
+      const userStr = localStorage.getItem("user");
+      if (!userStr) return null;
+      const user = JSON.parse(userStr);
+      const id = Number(user?.id ?? user?.userId ?? user?.studentId);
+      return Number.isFinite(id) && id > 0 ? id : null;
+    } catch (err) {
+      return null;
+    }
+  };
+
+  const resolvedUserId = resolveUserId();
+  if (!resolvedUserId) {
+    // Not fatal, but warn so developers notice missing id
+    // eslint-disable-next-line no-console
+    console.warn("RateAlerts: no userId provided and none found in localStorage.user");
+  }
   const [fromCurrency, setFromCurrency] = useState("USD");
   const [toCurrency, setToCurrency] = useState("EUR");
   const [direction, setDirection] = useState<"ABOVE" | "BELOW">("ABOVE");
@@ -170,10 +189,14 @@ export function RateAlerts({ onBack, userId = 1 }: RateAlertsProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Load alerts on component mount
+  // Load alerts on component mount or when resolved user id changes
   useEffect(() => {
+    if (!resolvedUserId) {
+      setAlerts([]);
+      return;
+    }
     loadAlerts();
-  }, [userId]);
+  }, [resolvedUserId]);
 
   // Load current rates periodically
   useEffect(() => {
@@ -215,7 +238,8 @@ export function RateAlerts({ onBack, userId = 1 }: RateAlertsProps) {
     setError(null);
 
     try {
-      const backendAlerts = await alertService.getAlertsByUserId(userId);
+      if (!resolvedUserId) throw new Error("No user id available");
+      const backendAlerts = await alertService.getAlertsByUserId(resolvedUserId);
 
       // Fetch current rates for all currency pairs
       const uniquePairs = [
@@ -261,8 +285,9 @@ export function RateAlerts({ onBack, userId = 1 }: RateAlertsProps) {
     setError(null);
 
     try {
+      if (!resolvedUserId) throw new Error("No user id available");
       const newAlert = transformFrontendToBackend(
-        userId,
+        resolvedUserId,
         fromCurrency,
         toCurrency,
         direction,
@@ -309,8 +334,9 @@ export function RateAlerts({ onBack, userId = 1 }: RateAlertsProps) {
       await alertService.deleteAlert(alert.id);
 
       // Create new alert with toggled status
+      if (!resolvedUserId) throw new Error("No user id available");
       const newAlert = transformFrontendToBackend(
-        userId,
+        resolvedUserId,
         alert.from,
         alert.to,
         alert.direction,

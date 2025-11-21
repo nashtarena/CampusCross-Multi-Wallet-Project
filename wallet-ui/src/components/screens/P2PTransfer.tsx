@@ -243,7 +243,7 @@ export function P2PTransfer({ onBack }: P2PTransferProps) {
       await transactionApi.p2pTransfer(transferData);
 
       toast.success(
-        `Successfully sent ${amount} ${selectedCurrency} to ${recipient}`
+        `Successfully sent ${amount} to ${recipient}`
       );
       setShowConfirmation(false);
       setAmount("");

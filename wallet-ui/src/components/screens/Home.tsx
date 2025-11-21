@@ -326,15 +326,6 @@ export function Home({ onNavigate }: HomeProps) {
               <span className={`text-xs ${textColor}`}>Send</span>
             </button>
             <button 
-              onClick={() => onNavigate('campus')}
-              className="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700"
-            >
-              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center">
-                <QrCode className="text-white" size={20} />
-              </div>
-              <span className={`text-xs ${textColor}`}>Pay</span>
-            </button>
-            <button 
               onClick={() => onNavigate('conversion')}
               className="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700"
             >
