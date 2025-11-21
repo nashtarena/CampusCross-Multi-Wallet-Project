@@ -1,4 +1,4 @@
-const WALLET_API_BASE_URL = "https://wallet-service-ydmq.onrender.com";
+const WALLET_API_BASE_URL = 'https://campuscross-multi-wallet-latest.onrender.com';
 
 // Helper function to get headers with JWT token
 const getAuthHeaders = () => {
