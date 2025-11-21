@@ -11,7 +11,6 @@ import { CurrencyConversion } from "./components/screens/CurrencyConversion";
 import { CampusPayments } from "./components/screens/CampusPayments";
 import { Remittance } from "./components/screens/Remittance";
 import { AdminPanel } from "./components/screens/AdminPanel";
-import { AdminLogin } from "./components/screens/AdminLogin";
 import { RateAlerts } from "./components/screens/RateAlerts";
 import { CreateWallet } from "./components/screens/CreateWallet";
 import { Toaster } from "./components/ui/sonner";
@@ -254,13 +253,6 @@ export default function App() {
         return <CampusPayments onBack={() => setCurrentScreen("home")} />;
       case "remittance":
         return <Remittance onBack={() => setCurrentScreen("home")} />;
-      case "admin-login":
-        return (
-          <AdminLogin
-            onBack={() => setCurrentScreen("home")}
-            onSuccess={() => setCurrentScreen("admin")}
-          />
-        );
       case "admin":
         return <AdminPanel onBack={() => setCurrentScreen("home")} />;
       case "alerts":
@@ -300,92 +292,6 @@ export default function App() {
       <div className="max-w-md mx-auto bg-white min-h-screen shadow-2xl">
         {renderScreen()}
         <Toaster position="top-center" />
-
-        {process.env.NODE_ENV === "development" && (
-          <div className="fixed bottom-4 right-4 bg-black/80 backdrop-blur-sm text-white p-4 rounded-xl shadow-lg max-w-xs z-50">
-            <p className="text-xs mb-2 font-semibold">Dev Navigation</p>
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <button
-                onClick={() => setCurrentScreen("welcome")}
-                className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded transition"
-              >
-                Welcome
-              </button>
-              <button
-                onClick={() => setCurrentScreen("signup")}
-                className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded transition"
-              >
-                SignUp
-              </button>
-              <button
-                onClick={() => setCurrentScreen("kyc1")}
-                className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded transition"
-              >
-                KYC 1
-              </button>
-              <button
-                onClick={() => setCurrentScreen("kyc2")}
-                className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded transition"
-              >
-                KYC 2
-              </button>
-              <button
-                onClick={() => setCurrentScreen("kyc-polling")}
-                className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded transition"
-              >
-                Polling
-              </button>
-              <button
-                onClick={() => setCurrentScreen("home")}
-                className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded transition"
-              >
-                Home
-              </button>
-              <button
-                onClick={() => setCurrentScreen("conversion")}
-                className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded transition"
-              >
-                Convert
-              </button>
-              <button
-                onClick={() => setCurrentScreen("p2p")}
-                className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded transition"
-              >
-                P2P
-              </button>
-              <button
-                onClick={() => setCurrentScreen("campus")}
-                className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded transition"
-              >
-                Campus
-              </button>
-              <button
-                onClick={() => setCurrentScreen("remittance")}
-                className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded transition"
-              >
-                Remittance
-              </button>
-              <button
-                onClick={() => setCurrentScreen("admin-login")}
-                className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded transition"
-              >
-                Admin
-              </button>
-              <button
-                onClick={() => setCurrentScreen("alerts")}
-                className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded transition"
-              >
-                Alerts
-              </button>
-              <button
-                onClick={() => setCurrentScreen("createWallet")}
-                className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded transition"
-              >
-                Create Wallet
-              </button>
-            </div>
-          </div>
-        )}
       </div>
     </AppContext.Provider>
   );

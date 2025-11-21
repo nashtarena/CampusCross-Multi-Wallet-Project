@@ -24,6 +24,7 @@ import {
   TableHeader,
   TableRow,
 } from "../ui/table";
+import { userApi } from "../../services/walletApi";
 
 interface AdminPanelProps {
   onBack: () => void;
@@ -42,9 +43,29 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
   const [adminCollege, setAdminCollege] = useState("");
 
   useEffect(() => {
-    // Get admin's college from localStorage
-    const userStr = localStorage.getItem("user");
-    
+    const fetchCollegeUsers = async () => {
+      const userStr = localStorage.getItem("user");
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        setAdminCollege(user.campusName);
+
+        try {
+          const users = await userApi.getUsersByCollege(user.campusName);
+          setCollegeUsers(
+            users.map((u: any) => ({
+              fullName: u.fullName,
+              studentId: u.studentId,
+              email: u.email,
+              kycStatus: u.kycStatus,
+            }))
+          );
+        } catch (error) {
+          console.error("Failed to fetch college users:", error);
+        }
+      }
+    };
+
+    fetchCollegeUsers();
   }, []);
 
   const handleLogout = () => {
@@ -70,7 +91,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
 
           <Button
             variant="outline"
-            className="border-white/20 text-white hover:bg-white/10 flex items-center gap-2"
+            className="bg-black/10 border-black/20 text-white flex items-center gap-2"
             onClick={handleLogout}
           >
             <LogOut size={16} />
@@ -82,17 +103,10 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
         <div className="grid grid-cols-3 gap-3">
           <Card className="p-4 bg-white/5 backdrop-blur-sm border-white/10">
             <Users className="text-blue-400 mb-2" size={24} />
-            <p className="text-2xl text-white mb-1">2,543</p>
             <p className="text-xs text-white/60">Active Users</p>
           </Card>
           <Card className="p-4 bg-white/5 backdrop-blur-sm border-white/10">
-            <FileCheck className="text-green-400 mb-2" size={24} />
-            <p className="text-2xl text-white mb-1">128</p>
-            <p className="text-xs text-white/60">Pending KYC</p>
-          </Card>
-          <Card className="p-4 bg-white/5 backdrop-blur-sm border-white/10">
             <Activity className="text-purple-400 mb-2" size={24} />
-            <p className="text-2xl text-white mb-1">$2.5M</p>
             <p className="text-xs text-white/60">Volume Today</p>
           </Card>
         </div>
@@ -112,18 +126,6 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
               className="flex-1 rounded-lg data-[state=active]:bg-white/10 data-[state=active]:text-white text-white/60"
             >
               Bulk
-            </TabsTrigger>
-            <TabsTrigger
-              value="kyc"
-              className="flex-1 rounded-lg data-[state=active]:bg-white/10 data-[state=active]:text-white text-white/60"
-            >
-              KYC
-            </TabsTrigger>
-            <TabsTrigger
-              value="logs"
-              className="flex-1 rounded-lg data-[state=active]:bg-white/10 data-[state=active]:text-white text-white/60"
-            >
-              Logs
             </TabsTrigger>
           </TabsList>
 
@@ -228,113 +230,6 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                 >
                   Process Disbursement
                 </Button>
-              </div>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="kyc" className="mt-0 space-y-3">
-            {kycRequests.map((request) => (
-              <Card
-                key={request.id}
-                className="p-4 bg-white/5 backdrop-blur-sm border-white/10"
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <div>
-                    <p className="text-white">{request.name}</p>
-                    <p className="text-xs text-white/60">
-                      {request.studentId} • {request.tier}
-                    </p>
-                  </div>
-                  <Badge
-                    variant={
-                      request.status === "approved"
-                        ? "default"
-                        : request.status === "pending"
-                        ? "secondary"
-                        : "destructive"
-                    }
-                    className={
-                      request.status === "approved"
-                        ? "bg-green-500/20 text-green-400"
-                        : request.status === "pending"
-                        ? "bg-amber-500/20 text-amber-400"
-                        : "bg-red-500/20 text-red-400"
-                    }
-                  >
-                    {request.status}
-                  </Badge>
-                </div>
-
-                {request.status === "pending" && (
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      className="flex-1 bg-green-500/20 text-green-400 hover:bg-green-500/30"
-                    >
-                      <CheckCircle2 size={14} className="mr-1" />
-                      Approve
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="flex-1 border-red-500/20 text-red-400 hover:bg-red-500/10"
-                    >
-                      Reject
-                    </Button>
-                  </div>
-                )}
-              </Card>
-            ))}
-          </TabsContent>
-
-          <TabsContent value="logs" className="mt-0">
-            <Card className="bg-white/5 backdrop-blur-sm border-white/10 overflow-hidden">
-              <div className="p-4 border-b border-white/10 flex items-center justify-between">
-                <h3 className="text-white">Activity Logs</h3>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="border-white/20 text-white hover:bg-white/10"
-                >
-                  <Download size={14} className="mr-2" />
-                  Export
-                </Button>
-              </div>
-
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="border-white/10 hover:bg-transparent">
-                      <TableHead className="text-white/60">Action</TableHead>
-                      <TableHead className="text-white/60">User</TableHead>
-                      <TableHead className="text-white/60">Details</TableHead>
-                      <TableHead className="text-white/60">Time</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {activityLogs.map((log) => (
-                      <TableRow
-                        key={log.id}
-                        className="border-white/10 hover:bg-white/5"
-                      >
-                        <TableCell className="text-white">
-                          {log.action}
-                        </TableCell>
-                        <TableCell className="text-white/80">
-                          {log.user}
-                        </TableCell>
-                        <TableCell className="text-white/60">
-                          {log.amount
-                            ? `${log.amount} ${log.currency}`
-                            : log.details}
-                        </TableCell>
-                        <TableCell className="text-white/60 text-xs">
-                          {log.timestamp}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
               </div>
             </Card>
           </TabsContent>
