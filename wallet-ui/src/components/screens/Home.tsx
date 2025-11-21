@@ -300,7 +300,7 @@ export function Home({ onNavigate }: HomeProps) {
                   <Button 
                     size="sm" 
                     onClick={() => onNavigate('kyc1')}
-                    className="bg-amber-600 hover:bg-amber-700 text-white text-xs h-8"
+                    className="border-white underline bg-amber-600 hover:bg-amber-700 text-amber-800 text-xs h-8"
                   >
                     Start Verification
                   </Button>

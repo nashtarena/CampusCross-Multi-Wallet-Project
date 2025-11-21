@@ -71,7 +71,6 @@ function parseStoredUser(): { id: number; userName: string } {
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>("welcome");
-<<<<<<< HEAD
 
   const [userName, setUserName] = useState<string>(() => {
     // Prefer value from stored "user", fallback to userName key
@@ -93,15 +92,6 @@ export default function App() {
     return legacy ? parseInt(legacy, 10) || 0 : 0;
   });
 
-=======
-  const [userName, setUserName] = useState(
-    () => localStorage.getItem("userName") || ""
-  );
-  const [userPassword, setUserPassword] = useState(
-    () => localStorage.getItem("userPassword") || ""
-  );
-  const [userId, setUserId] = useState(localStorage.getItem("userId") ? parseInt(localStorage.getItem("userId") as string) : 0);
->>>>>>> f0af6a9b7edd4ecde144e0db3704841cdcede79c
   const [accessToken, setAccessToken] = useState("");
   const [theme, setTheme] = useState<"light" | "dark">(
     () => (localStorage.getItem("theme") as "light" | "dark") || "light"
@@ -324,19 +314,11 @@ export default function App() {
 
       case "p2p":
         return <P2PTransfer onBack={() => setCurrentScreen("home")} />;
-<<<<<<< HEAD
-
-=======
->>>>>>> f0af6a9b7edd4ecde144e0db3704841cdcede79c
       case "remittance":
         return <Remittance onBack={() => setCurrentScreen("home")} />;
 
       case "admin":
         return <AdminPanel />;
-<<<<<<< HEAD
-
-=======
->>>>>>> f0af6a9b7edd4ecde144e0db3704841cdcede79c
       case "alerts":
         // Pass the latest userId prop (keeps RateAlerts behavior unchanged).
         return <RateAlerts onBack={() => setCurrentScreen("home")} userId={userId} />;
