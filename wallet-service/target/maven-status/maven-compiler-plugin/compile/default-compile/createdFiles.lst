@@ -18,7 +18,7 @@ com\campuscross\wallet\controller\WalletController$CreateWalletRequest.class
 com\campuscross\wallet\entity\Transaction$TransactionType.class
 com\campuscross\wallet\controller\WalletController.class
 com\campuscross\wallet\entity\User$UserRole.class
-com\campuscross\wallet\config\JwtAuthenticationFilter.class
+com\campuscross\wallet\security\JwtAuthFilter.class
 com\campuscross\wallet\controller\TransactionController$PagedTransactionResponse.class
 com\campuscross\wallet\controller\TransactionController$RemittanceRequest.class
 com\campuscross\wallet\config\CorsConfig$1.class
