@@ -1,7 +1,6 @@
 package com.campuscross.wallet.config;
 
 import com.campuscross.wallet.security.JwtAuthFilter;
-
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -25,7 +24,19 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .cors(cors -> {})
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/auth/**").permitAll()
+                // PUBLIC ENDPOINTS
+                .requestMatchers(
+                        "/",                // root
+                        "/error",           // error path
+                        "/favicon.ico",
+                        "/auth/**",         // login/register
+                        "/v3/api-docs/**",
+                        "/swagger-ui/**",
+                        "/swagger-ui.html",
+                        "/actuator/**"
+                ).permitAll()
+
+                // EVERYTHING ELSE REQUIRES JWT
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
