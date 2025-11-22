@@ -1,6 +1,5 @@
 package com.campuscross.wallet.config;
 
-import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -10,6 +9,8 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
+import lombok.RequiredArgsConstructor;
 
 @Configuration
 @RequiredArgsConstructor
@@ -22,14 +23,21 @@ public class SecurityConfig {
 
         http
             .csrf(csrf -> csrf.disable())
-            .cors(cors -> {})  
+            .cors(cors -> {})  // use your CorsConfig
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/auth/login", "/auth/register").permitAll()
-                .requestMatchers("/actuator/health").permitAll()
-                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()  
-                .anyRequest().authenticated()
+                    // public endpoints
+                    .requestMatchers("/", "/error").permitAll()
+                    .requestMatchers("/auth/login", "/auth/register").permitAll()
+                    .requestMatchers("/actuator/health", "/healthz").permitAll()
+
+                    // allow CORS preflight OPTIONS
+                    .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
+                    // everything else must be authenticated
+                    .anyRequest().authenticated()
             )
+            // Do NOT run JWT filter on public routes or OPTIONS
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
