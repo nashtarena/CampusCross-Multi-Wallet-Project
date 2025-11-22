@@ -16,7 +16,7 @@ import jakarta.servlet.http.HttpServletRequest;
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
 @Slf4j
-@CrossOrigin(origins = "https://campus-cross-multi-wallet-project-zil3jddqg.vercel.app")
+@CrossOrigin(origins = "https://campus-cross-multi-wallet-project.vercel.app")
 public class AuthController {
 
     private final AuthenticationService authenticationService;
