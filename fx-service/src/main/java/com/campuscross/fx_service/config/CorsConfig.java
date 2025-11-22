@@ -1,4 +1,4 @@
-package com.campuscross.wallet.config;
+package com.campuscross.fx_service.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -15,11 +15,7 @@ public class CorsConfig {
             public void addCorsMappings(CorsRegistry registry) {
                 registry.addMapping("/**")
                         .allowedOrigins(
-                            "https://campus-cross-multi-wallet-project.vercel.app",
-                            "https://campus-cross-multi-wallet-project-zil3jddqg.vercel.app",
-                            "http://localhost:3000",
-                            "http://localhost:5173"
-                        )
+                                "https://campus-cross-multi-wallet-project.vercel.app")
                         .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH")
                         .allowedHeaders("*")
                         .allowCredentials(true)
