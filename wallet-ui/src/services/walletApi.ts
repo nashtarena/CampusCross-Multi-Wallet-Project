@@ -1,4 +1,4 @@
-const WALLET_API_BASE_URL = 'https://wallet-service-prpt.onrender.com';
+const WALLET_API_BASE_URL = 'https://wallet-service-prpt.onrender.com/api';
 
 // Helper function to get headers with JWT token
 const getAuthHeaders = () => {
