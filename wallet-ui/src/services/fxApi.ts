@@ -1,4 +1,4 @@
-const FX_API_BASE_URL = "https://campuscross-multi-wallet-project-naif.onrender.com/api/fx";
+const FX_API_BASE_URL = "https://campuscross-multi-wallet-project-naif.onrender.com/api/v1";
 
 export interface QuoteResponse {
   from: string;
