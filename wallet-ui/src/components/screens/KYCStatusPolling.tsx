@@ -14,7 +14,7 @@ export function KYCStatusPolling({ userId, onVerified, onRejected }: KYCStatusPo
   useEffect(() => {
     const pollInterval = setInterval(async () => {
       try {
-        const response = await fetch(`http://localhost:8080/api/v1/kyc/status/${userId}`);
+        const response = await fetch(`https://campuscross-multi-wallet-project-naif.onrender.com/api/v1/kyc/status/${userId}`);
         const data = await response.json();
 
         setStatus(data.status);

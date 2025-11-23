@@ -59,7 +59,7 @@ export function KYCTier1({ userId, onBack, onNext }: KYCTier1Props) {
 
     try {
       // Call your backend API
-      const response = await fetch('http://localhost:8080/api/v1/kyc/tier1', {
+      const response = await fetch('https://campuscross-multi-wallet-project-naif.onrender.com/api/v1/kyc/tier1', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
