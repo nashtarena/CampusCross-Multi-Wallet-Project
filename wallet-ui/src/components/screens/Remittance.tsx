@@ -347,7 +347,7 @@ export function Remittance({ onBack }: RemittanceProps) {
                             </SelectItem>
                           ))
                         ) : (
-                          <SelectItem value="">No wallets</SelectItem>
+                          <SelectItem value="no-wallets" disabled>No wallets available</SelectItem>
                         )}
                       </SelectContent>
                     </Select>
