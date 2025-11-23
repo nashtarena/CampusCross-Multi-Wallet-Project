@@ -330,9 +330,9 @@ export function Remittance({ onBack }: RemittanceProps) {
                   <div className="space-y-2">
                     <Label className="text-gray-700">Wallet</Label>
                     <Select
-                      value={selectedWallet ? selectedWallet.walletId : ''}
+                      value={selectedWallet ? String(selectedWallet.walletId) : ''}
                       onValueChange={(walletId: string) => {
-                        const wallet = wallets.find((w) => w.walletId === walletId);
+                        const wallet = wallets.find((w) => String(w.walletId) === walletId);
                         setSelectedWallet(wallet || null);
                       }}
                     >
@@ -342,7 +342,7 @@ export function Remittance({ onBack }: RemittanceProps) {
                       <SelectContent>
                         {wallets.length > 0 ? (
                           wallets.map((wallet) => (
-                            <SelectItem key={wallet.walletId} value={wallet.walletId}>
+                            <SelectItem key={String(wallet.walletId)} value={String(wallet.walletId)}>
                               {wallet.currencyCode} (Balance: {wallet.balance})
                             </SelectItem>
                           ))
