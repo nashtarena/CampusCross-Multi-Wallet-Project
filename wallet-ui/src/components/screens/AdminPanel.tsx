@@ -22,7 +22,7 @@ import { userApi, walletApi } from "../../services/walletApi";
 import { toast } from "sonner";
 
 interface CollegeUser {
-  userId?: string;      // backend returns userId (studentId)
+  userId?: string;
   fullName: string;
   studentId?: string;
   email?: string;
@@ -57,9 +57,12 @@ export function AdminPanel() {
 
       try {
         const userStr = localStorage.getItem("user");
-        if (!userStr) {
+        const token = localStorage.getItem("authToken");
+        
+        if (!userStr || !token) {
           setError("No user data found. Please log in again.");
           setIsLoading(false);
+          handleLogout();
           return;
         }
 
@@ -71,21 +74,33 @@ export function AdminPanel() {
           return;
         }
 
-        // fetch profile from backend (gives campusName and userId)
-        const userProfile = await userApi.getCurrentUserProfile();
-        const campusName = userProfile.campusName || userProfile.collegeName || userProfile.college || userProfile.campus;
+        // Try to fetch profile from backend, fall back to localStorage if it fails
+        let campusName;
+        
+        try {
+          console.log("🔍 Fetching user profile from backend...");
+          const userProfile = await userApi.getCurrentUserProfile();
+          campusName = userProfile.campusName || userProfile.collegeName || userProfile.college || userProfile.campus;
+          console.log("✅ Profile fetched successfully. Campus:", campusName);
+        } catch (profileError: any) {
+          console.warn("⚠️ Profile fetch failed, using localStorage fallback:", profileError);
+          campusName = user.campusName || user.collegeName || user.college || user.campus;
+          console.log("📦 Using campus from localStorage:", campusName);
+        }
 
         if (!campusName) {
-          setError(`No campus information found in your profile. Available fields: ${Object.keys(userProfile).join(', ')}`);
+          setError("No campus information found. Please contact support.");
           setIsLoading(false);
           return;
         }
 
         setAdminCollege(campusName);
 
-        // fetch users by college (backend returns an array of user responses)
+        // Fetch users by college
+        console.log("👥 Fetching users for college:", campusName);
         const users = await userApi.getUsersByCollege(campusName);
-        // Map robustly to handle field names from backend (userId vs studentId)
+        
+        // Map robustly to handle field names from backend
         const mapped: CollegeUser[] = users.map((u: any) => ({
           userId: u.userId || u.studentId || u.id || undefined,
           fullName: u.fullName || `${u.firstName || ''} ${u.lastName || ''}`.trim() || 'Unknown',
@@ -95,16 +110,26 @@ export function AdminPanel() {
         }));
 
         setCollegeUsers(mapped);
+        console.log("✅ Loaded", mapped.length, "users");
 
-        // If disbursement CSV was already loaded earlier, reattach student names
+        // If disbursement CSV was already loaded, reattach student names
         setDisbursementData(prev => prev.map(row => {
           const st = mapped.find(mu => mu.studentId === row.studentId || mu.userId === row.studentId);
           return { ...row, studentName: st?.fullName || row.studentName };
         }));
 
       } catch (err: any) {
-        console.error("Failed to fetch college users:", err);
-        setError(err?.message || String(err) || 'Failed to load data');
+        console.error("❌ Failed to fetch college users:", err);
+        
+        // Check if it's an authentication error
+        if (err?.message?.includes("User not found") || 
+            err?.message?.includes("authentication") ||
+            err?.message?.includes("401")) {
+          setError("Authentication failed. Please log in again.");
+          setTimeout(() => handleLogout(), 2000);
+        } else {
+          setError(err?.message || String(err) || 'Failed to load data');
+        }
       } finally {
         setIsLoading(false);
       }
@@ -184,20 +209,21 @@ export function AdminPanel() {
       const row = updated[i];
 
       try {
-        // Locate student in loaded users to get the userId/studentId (backend uses studentId as userId)
         const student = collegeUsers.find(u => u.studentId === row.studentId || u.userId === row.studentId);
         const userId = student?.userId || student?.studentId || row.studentId;
 
         if (!userId) throw new Error('Student user id not found');
 
-        // 1) Get student's default wallet (backend: GET /api/wallets/user/{userId}/default)
+        console.log(`💸 Processing disbursement for ${row.studentName} (${userId})...`);
+
+        // Get student's default wallet
         const wallet = await walletApi.getDefaultWallet(userId);
 
         if (!wallet || !wallet.id) {
           throw new Error('Student has no default wallet');
         }
 
-        // 2) Add funds to wallet (backend: POST /api/wallets/{walletId}/add-funds)
+        // Add funds to wallet
         await walletApi.addFunds(wallet.id, row.amount);
 
         updated[i] = { ...row, status: 'success', error: undefined };
@@ -214,7 +240,7 @@ export function AdminPanel() {
 
       setDisbursementData([...updated]);
 
-      // small delay to avoid hammering backend
+      // Small delay to avoid hammering backend
       await new Promise(resolve => setTimeout(resolve, 400));
     }
 
