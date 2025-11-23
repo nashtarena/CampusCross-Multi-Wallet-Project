@@ -171,7 +171,7 @@ export function Remittance({ onBack }: RemittanceProps) {
       }
 
       // Use the correct wallet deduction endpoint and payload
-      const response = await fetch(`${API_BASE_URL}/wallets/${selectedWallet.walletId}/deduct-funds`, {
+      const response = await fetch(`${API_BASE_URL}/wallets/${selectedWallet.id}/deduct-funds`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -326,9 +326,9 @@ export function Remittance({ onBack }: RemittanceProps) {
                   <div className="space-y-2">
                     <Label className="text-gray-700">Wallet</Label>
                     <Select
-                      value={selectedWallet ? String(selectedWallet.walletId) : ''}
+                      value={selectedWallet ? String(selectedWallet.id) : ''}
                       onValueChange={(walletId: string) => {
-                        const wallet = wallets.find((w) => String(w.walletId) === walletId);
+                        const wallet = wallets.find((w) => String(w.id) === walletId);
                         setSelectedWallet(wallet || null);
                       }}
                     >
@@ -338,7 +338,7 @@ export function Remittance({ onBack }: RemittanceProps) {
                       <SelectContent>
                         {wallets.length > 0 ? (
                           wallets.map((wallet) => (
-                            <SelectItem key={String(wallet.walletId)} value={String(wallet.walletId)}>
+                            <SelectItem key={String(wallet.id)} value={String(wallet.id)}>
                               {wallet.currencyCode} (Balance: {wallet.balance})
                             </SelectItem>
                           ))
