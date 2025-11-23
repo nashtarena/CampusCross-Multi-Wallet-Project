@@ -16,7 +16,8 @@ interface RemittanceProps {
 
 export function Remittance({ onBack }: RemittanceProps) {
   const [activeTab, setActiveTab] = useState('send');
-  const [selectedCurrency, setSelectedCurrency] = useState('USD');
+  // Remove selectedCurrency, use selectedWallet for all logic
+  const [selectedCurrency, setSelectedCurrency] = useState('USD'); // Deprecated, kept for fee display
   const [amount, setAmount] = useState('');
   const [recipientName, setRecipientName] = useState('');
   const [bankName, setBankName] = useState('');
@@ -54,17 +55,12 @@ export function Remittance({ onBack }: RemittanceProps) {
     }
   }, []);
 
-  // Update selected wallet when currency changes
+  // Update selectedCurrency when selectedWallet changes
   useEffect(() => {
-    if (wallets.length > 0) {
-      const wallet = wallets.find((w: any) => w.currencyCode === selectedCurrency);
-      if (wallet) {
-        setSelectedWallet(wallet);
-      } else {
-        setSelectedWallet(null);
-      }
+    if (selectedWallet) {
+      setSelectedCurrency(selectedWallet.currencyCode);
     }
-  }, [selectedCurrency, wallets]);
+  }, [selectedWallet]);
 
   const fetchWallets = async (uid: string) => {
     if (!uid || uid === 'undefined') {
@@ -89,13 +85,9 @@ export function Remittance({ onBack }: RemittanceProps) {
       if (response.ok) {
         const walletsData = await response.json();
         setWallets(walletsData);
-        // Set initial selected wallet based on default currency (USD)
-        const usdWallet = walletsData.find((w: any) => w.currencyCode === selectedCurrency);
-        if (usdWallet) {
-          setSelectedWallet(usdWallet);
-        } else if (walletsData.length > 0) {
+        // Set initial selected wallet to first wallet if available
+        if (walletsData.length > 0) {
           setSelectedWallet(walletsData[0]);
-          setSelectedCurrency(walletsData[0].currencyCode);
         }
       } else {
         console.error('Failed to fetch wallets:', response.status, response.statusText);
@@ -152,7 +144,7 @@ export function Remittance({ onBack }: RemittanceProps) {
     }
 
     if (!selectedWallet) {
-      setError(`No ${selectedCurrency} wallet found. Please create a ${selectedCurrency} wallet first.`);
+      setError('No wallet selected. Please select a wallet first.');
       return;
     }
 
@@ -163,7 +155,7 @@ export function Remittance({ onBack }: RemittanceProps) {
     }
 
     if (selectedWallet.balance < amountNum) {
-      setError(`Insufficient balance in ${selectedCurrency} wallet. Available: ${selectedWallet.balance} ${selectedCurrency}`);
+      setError(`Insufficient balance in selected wallet. Available: ${selectedWallet.balance} ${selectedWallet.currencyCode}`);
       return;
     }
 
@@ -189,7 +181,7 @@ export function Remittance({ onBack }: RemittanceProps) {
           userId: userId,
           walletId: selectedWallet.walletId,
           amount: amountNum,
-          currency: selectedCurrency,
+          currency: selectedWallet.currencyCode,
           bankAccountNumber: accountNumber,
           bankName: bankName
         })
@@ -279,13 +271,13 @@ export function Remittance({ onBack }: RemittanceProps) {
                 {selectedWallet ? (
                   <div className="bg-blue-50 rounded-xl p-3">
                     <p className="text-sm text-gray-700 font-medium">
-                      Available Balance: {selectedWallet.balance} {selectedWallet.currencyCode}
+                      Selected Wallet: {selectedWallet.currencyCode} (Balance: {selectedWallet.balance})
                     </p>
                   </div>
                 ) : (
                   <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
                     <p className="text-sm text-amber-700 font-medium">
-                      No {selectedCurrency} wallet found. Please create a {selectedCurrency} wallet first.
+                      No wallet selected. Please select a wallet first.
                     </p>
                   </div>
                 )}
@@ -336,20 +328,26 @@ export function Remittance({ onBack }: RemittanceProps) {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-2">
-                    <Label className="text-gray-700">Currency</Label>
-                    <Select value={selectedCurrency} onValueChange={setSelectedCurrency}>
+                    <Label className="text-gray-700">Wallet</Label>
+                    <Select
+                      value={selectedWallet ? selectedWallet.walletId : ''}
+                      onValueChange={(walletId: string) => {
+                        const wallet = wallets.find((w) => w.walletId === walletId);
+                        setSelectedWallet(wallet || null);
+                      }}
+                    >
                       <SelectTrigger className="h-12 rounded-xl border-gray-200">
-                        <SelectValue />
+                        <SelectValue placeholder="Select wallet" />
                       </SelectTrigger>
                       <SelectContent>
                         {wallets.length > 0 ? (
                           wallets.map((wallet) => (
-                            <SelectItem key={wallet.walletId} value={wallet.currencyCode}>
+                            <SelectItem key={wallet.walletId} value={wallet.walletId}>
                               {wallet.currencyCode} (Balance: {wallet.balance})
                             </SelectItem>
                           ))
                         ) : (
-                          <SelectItem value="USD">USD</SelectItem>
+                          <SelectItem value="">No wallets</SelectItem>
                         )}
                       </SelectContent>
                     </Select>
@@ -371,16 +369,16 @@ export function Remittance({ onBack }: RemittanceProps) {
                   <p className="text-sm text-gray-700 mb-2 font-medium">Fee Breakdown</p>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Transfer Amount</span>
-                    <span className="text-gray-900 font-medium">{amount || '0.00'} {selectedCurrency}</span>
+                    <span className="text-gray-900 font-medium">{amount || '0.00'} {selectedWallet ? selectedWallet.currencyCode : ''}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Transfer Fee (1%)</span>
-                    <span className="text-gray-900 font-medium">{fee.toFixed(2)} {selectedCurrency}</span>
+                    <span className="text-gray-900 font-medium">{fee.toFixed(2)} {selectedWallet ? selectedWallet.currencyCode : ''}</span>
                   </div>
                   <div className="h-px bg-gray-300 my-2" />
                   <div className="flex justify-between">
                     <span className="text-gray-900 font-semibold">Total</span>
-                    <span className="text-gray-900 font-semibold">{totalAmount.toFixed(2)} {selectedCurrency}</span>
+                    <span className="text-gray-900 font-semibold">{totalAmount.toFixed(2)} {selectedWallet ? selectedWallet.currencyCode : ''}</span>
                   </div>
                 </div>
 
