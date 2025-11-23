@@ -169,39 +169,35 @@ export function Remittance({ onBack }: RemittanceProps) {
         setError('Authentication token not found. Please log in again.');
         return;
       }
-      
-      // Using the withdrawal endpoint for remittance
-      const response = await fetch(`${API_BASE_URL}/banking/withdraw`, {
+
+      // Use the correct wallet deduction endpoint and payload
+      const response = await fetch(`${API_BASE_URL}/wallets/${selectedWallet.walletId}/deduct-funds`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          userId: userId,
-          walletId: selectedWallet.walletId,
           amount: amountNum,
-          currency: selectedWallet.currencyCode,
-          bankAccountNumber: accountNumber,
-          bankName: bankName
+          description: `Remittance to ${recipientName} at ${bankName}${swiftCode ? ' (SWIFT/IBAN: ' + swiftCode + ')' : ''}`
         })
       });
 
       if (response.ok) {
         const result = await response.json();
         setSuccess(`Remittance sent successfully! Transaction ID: ${result.transactionId}`);
-        
+
         // Clear form
         setRecipientName('');
         setBankName('');
         setAccountNumber('');
         setSwiftCode('');
         setAmount('');
-        
+
         // Refresh wallets and transactions
         fetchWallets(userId);
         fetchTransactions(userId);
-        
+
         // Switch to status tab after 2 seconds
         setTimeout(() => {
           setActiveTab('status');
