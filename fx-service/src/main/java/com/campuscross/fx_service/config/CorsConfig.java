@@ -14,11 +14,11 @@ public class CorsConfig {
             @Override
             public void addCorsMappings(CorsRegistry registry) {
                 registry.addMapping("/**")
-                        .allowedOrigins(
-                                "https://campus-cross-multi-wallet-project.vercel.app")
+                        .allowedOriginPatterns("*") // Temporarily allow all for testing
                         .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH")
                         .allowedHeaders("*")
-                        .allowCredentials(true)
+                        .exposedHeaders("Authorization")
+                        .allowCredentials(false)
                         .maxAge(3600);
             }
         };
