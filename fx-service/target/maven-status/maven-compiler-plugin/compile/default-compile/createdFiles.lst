@@ -1,6 +1,7 @@
 com\campuscross\fx_service\dto\remittance\RemittanceRequest.class
 com\campuscross\fx_service\service\KycAsyncProcessor.class
 com\campuscross\fx_service\dto\airwallex\AirwallexPayoutRequest$Beneficiary.class
+com\campuscross\fx_service\config\SecurityConfig.class
 com\campuscross\fx_service\delegate\FxCacheDelegate.class
 com\campuscross\fx_service\service\FxService.class
 com\campuscross\fx_service\model\RateAlert$AlertStatus.class
