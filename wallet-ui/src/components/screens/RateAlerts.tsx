@@ -51,7 +51,7 @@ interface RateAlertsProps {
 
 // API Service Functions
 const API_BASE_URL =
-  import.meta.env.VITE_API_URL || "https://campuscross-multi-wallet-latest.onrender.com/api/v1";
+  import.meta.env.VITE_API_URL || "https://campuscross-multi-wallet-project-naif.onrender.com/api/v1";
 
 const alertService = {
   // Create new alert
