@@ -127,7 +127,7 @@ export function Welcome({ onNext, onNavigateToHome }: WelcomeProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-900 to-purple-900 flex flex-col relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-indigo-900 flex flex-col relative overflow-hidden">
       {/* Animated Background Elements */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-indigo-500/20 rounded-full blur-3xl animate-pulse" />
@@ -226,7 +226,7 @@ export function Welcome({ onNext, onNavigateToHome }: WelcomeProps) {
                 <div className="flex-1">
                   <h3 className="text-white text-lg mb-1">Campus Payments</h3>
                   <p className="text-indigo-200 text-sm leading-relaxed">
-                    Pay at university merchants using QR codes or NFC tap
+                    Pay to university merchants and services with ease.
                   </p>
                 </div>
               </div>
