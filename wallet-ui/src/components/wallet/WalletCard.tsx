@@ -193,7 +193,7 @@ export function ReceiveDialog({ open, onOpenChange, wallet, onDeposit }: { open:
         <DialogHeader>
           <DialogTitle>Receive {wallet.currencyCode}</DialogTitle>
           <DialogDescription>
-            Add funds to your {wallet.walletName || wallet.currencyCode} wallet via simulated bank deposit.
+            Add funds to your {wallet.walletName || wallet.currencyCode} wallet.
           </DialogDescription>
         </DialogHeader>
 

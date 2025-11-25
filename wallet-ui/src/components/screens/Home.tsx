@@ -268,7 +268,7 @@ export function Home({ onNavigate }: HomeProps) {
               {Object.entries(balancesByCurrency).map(([currency, balance]) => (
                 <div key={currency} className="flex justify-between items-center">
                   <span className="text-white/90 text-lg">{currency}</span>
-                  <span className="text-white text-lg font-semibold">
+                  <span className="text-black text-lg font-semibold">
                     {getCurrencySymbol(currency)}{balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                 </div>
