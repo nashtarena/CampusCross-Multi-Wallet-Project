@@ -321,9 +321,6 @@ export default function MerchantDashboard({ onNavigate }: HomeProps) {
               ))}
             </div>
           )}
-          <div className="flex items-center gap-2 mt-2">
-            <p className="text-green-300 text-xs">+5.2% this month</p>
-          </div>
         </div>
       </div>
 
