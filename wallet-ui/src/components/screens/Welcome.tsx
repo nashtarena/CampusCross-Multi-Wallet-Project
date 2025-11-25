@@ -127,13 +127,7 @@ export function Welcome({ onNext, onNavigateToHome }: WelcomeProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-indigo-900 flex flex-col relative overflow-hidden">
-      {/* Animated Background Elements */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-indigo-500/20 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute top-60 -left-20 w-60 h-60 bg-purple-500/20 rounded-full blur-3xl animate-pulse delay-1000" />
-        <div className="absolute -bottom-20 right-20 w-72 h-72 bg-blue-500/20 rounded-full blur-3xl animate-pulse delay-500" />
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-blue-900 flex flex-col relative overflow-hidden">
 
       {/* Content */}
       <div className="relative z-10 flex-1 flex flex-col">
