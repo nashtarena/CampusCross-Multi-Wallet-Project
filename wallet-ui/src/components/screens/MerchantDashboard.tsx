@@ -309,7 +309,7 @@ export default function MerchantDashboard({ onNavigate }: HomeProps) {
                   key={currency}
                   className="flex justify-between items-center"
                 >
-                  <span className="text-white/90 text-lg">{currency}</span>
+                  <span className="text-white text-lg">{currency}</span>
                   <span className="text-white text-lg font-semibold">
                     {getCurrencySymbol(currency)}
                     {balance.toLocaleString("en-US", {
