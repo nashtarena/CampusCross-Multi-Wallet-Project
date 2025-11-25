@@ -315,7 +315,7 @@ export function Home({ onNavigate }: HomeProps) {
       <div className="px-6 -mt-6 mb-6">
         <Card className={`p-4 shadow-lg border-0 ${cardBg}`}>
           <p className={`text-sm mb-3 ${textColor}`}>Quick Actions</p>
-          <div className="grid grid-cols-4 gap-1">
+          <div className="grid grid-cols-4 gap-12">
             <button 
               onClick={() => onNavigate('p2p')}
               className="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700"
