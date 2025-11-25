@@ -281,36 +281,6 @@ export function Home({ onNavigate }: HomeProps) {
         </div>
       </div>
 
-      {/* KYC Reminder */}
-      {kycStatus !== 'VERIFIED' && (
-        <div className="px-6 -mt-4 mb-6">
-          <Card className={`p-4 border-l-4 ${kycStatus === 'NOT_STARTED' ? 'border-l-amber-500 bg-amber-50' : 'border-l-blue-500 bg-blue-50'} shadow-lg border-0`}>
-            <div className="flex items-start gap-3">
-              <AlertCircleIcon className={`mt-0.5 ${kycStatus === 'NOT_STARTED' ? 'text-amber-600' : 'text-blue-600'}`} size={20} />
-              <div className="flex-1">
-                <h3 className={`font-semibold text-sm mb-1 ${kycStatus === 'NOT_STARTED' ? 'text-amber-800' : 'text-blue-800'}`}>
-                  {kycStatus === 'NOT_STARTED' ? 'Complete KYC Verification' : 'KYC Verification Pending'}
-                </h3>
-                <p className={`text-xs mb-3 ${kycStatus === 'NOT_STARTED' ? 'text-amber-700' : 'text-blue-700'}`}>
-                  {kycStatus === 'NOT_STARTED' 
-                    ? 'Verify your identity to unlock full wallet features and higher transaction limits.' 
-                    : 'Your KYC verification is under review. We\'ll notify you once it\'s approved.'}
-                </p>
-                {kycStatus === 'NOT_STARTED' && (
-                  <Button 
-                    size="sm" 
-                    onClick={() => onNavigate('kyc1')}
-                    className="border-white underline bg-amber-600 hover:bg-amber-700 text-amber-800 text-xs h-8"
-                  >
-                    Start Verification
-                  </Button>
-                )}
-              </div>
-            </div>
-          </Card>
-        </div>
-      )}
-
       {/* Quick Actions */}
       <div className="px-6 -mt-6 mb-6">
         <Card className={`p-4 shadow-lg border-0 ${cardBg}`}>
