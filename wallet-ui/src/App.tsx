@@ -62,7 +62,7 @@ function parseStoredUser(): { id: number; userName: string } {
     if (!raw) return { id: 0, userName: "" };
     const u = JSON.parse(raw);
     const id = Number(u?.id ?? u?.userId ?? u?.studentId ?? 0) || 0;
-    const userName = String(u?.name ?? u?.username ?? u?.email ?? "") || "";
+    const userName = String(u?.fullName ?? u?.username ?? u?.email ?? "") || "";
     return { id, userName };
   } catch {
     return { id: 0, userName: "" };
