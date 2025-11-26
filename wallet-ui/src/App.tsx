@@ -1,6 +1,7 @@
 import React, { useEffect, useState, createContext, useContext } from "react";
 import { Welcome } from "./components/screens/Welcome";
 import { SignUp } from "./components/screens/SignUp";
+import { SignIn } from "./components/screens/SignIn";
 import { KYCTier1 } from "./components/screens/KYCTier1";
 import { KYCTier2 } from "./components/screens/KYCTier2";
 import { KYCStatusPolling } from "./components/screens/KYCStatusPolling";
@@ -16,6 +17,7 @@ import { Toaster } from "./components/ui/sonner";
 
 type Screen =
   | "welcome"
+  | "signin"
   | "signup"
   | "kyc1"
   | "kyc2"
@@ -227,22 +229,13 @@ export default function App() {
         return (
           <Welcome
             onNext={() => setCurrentScreen("signup")}
-            onNavigateToHome={() => {
-              const userStr = localStorage.getItem("user");
-              if (userStr) {
-                try {
-                  const user = JSON.parse(userStr);
-                  if (user.role === "ADMIN") setCurrentScreen("admin");
-                  else if (user.role === "MERCHANT") setCurrentScreen("merchant");
-                  else setCurrentScreen("home");
-                } catch {
-                  setCurrentScreen("home");
-                }
-              } else {
-                setCurrentScreen("home");
-              }
-            }}
+            onNavigateToSignIn={() => setCurrentScreen("signin")}
           />
+        );
+
+      case "signin":
+        return (
+          <SignIn onBack={() => setCurrentScreen("welcome")} />
         );
 
       case "signup":
@@ -330,7 +323,7 @@ export default function App() {
         return <Home onNavigate={(screen) => setCurrentScreen(screen as Screen)} />;
 
       default:
-        return <Welcome onNext={() => setCurrentScreen("signup")} />;
+        return <Welcome onNext={() => setCurrentScreen("signup")} onNavigateToSignIn={() => setCurrentScreen("signin")} />;
     }
   };
 

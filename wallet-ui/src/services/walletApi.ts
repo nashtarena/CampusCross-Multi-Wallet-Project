@@ -1,4 +1,4 @@
-const WALLET_API_BASE_URL = 'https://wallet-service-prpt.onrender.com/api';
+const WALLET_API_BASE_URL = import.meta.env.VITE_WALLET_BASE_URL;
 
 // Helper function to get headers with JWT token
 const getAuthHeaders = () => {

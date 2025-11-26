@@ -6,6 +6,8 @@ import { Card } from '../ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { ArrowLeft, Shield, CheckCircle2, Loader2 } from 'lucide-react';
 
+const baseUrl = import.meta.env.VITE_API_BASE_URL;
+
 interface KYCTier1Props {
   userId: string | number; // ADDED: Need userId from auth/session
   onBack: () => void;
@@ -59,7 +61,7 @@ export function KYCTier1({ userId, onBack, onNext }: KYCTier1Props) {
 
     try {
       // Call your backend API
-      const response = await fetch('https://campuscross-multi-wallet-project-naif.onrender.com/api/v1/kyc/tier1', {
+      const response = await fetch(`${baseUrl}/kyc/tier1`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

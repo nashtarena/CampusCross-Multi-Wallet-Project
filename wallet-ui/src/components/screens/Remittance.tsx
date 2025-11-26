@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { ArrowLeft, Building2, Clock, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 import { Progress } from '../ui/progress';
 
-const API_BASE_URL = 'https://wallet-service-prpt.onrender.com/api';
+const API_BASE_URL = import.meta.env.VITE_WALLET_BASE_URL;
 
 interface RemittanceProps {
   onBack: () => void;

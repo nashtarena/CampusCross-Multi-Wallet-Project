@@ -7,6 +7,8 @@ interface KYCStatusPollingProps {
   onRejected: (reason: string) => void;
 }
 
+const baseUrl = import.meta.env.VITE_API_BASE_URL;
+
 export function KYCStatusPolling({ userId, onVerified, onRejected }: KYCStatusPollingProps) {
   const [status, setStatus] = useState<string>('PENDING');
   const [message, setMessage] = useState<string>('Processing your documents...');
@@ -14,7 +16,7 @@ export function KYCStatusPolling({ userId, onVerified, onRejected }: KYCStatusPo
   useEffect(() => {
     const pollInterval = setInterval(async () => {
       try {
-        const response = await fetch(`https://campuscross-multi-wallet-project-naif.onrender.com/api/v1/kyc/status/${userId}`);
+        const response = await fetch(`${baseUrl}/api/v1/kyc/status/${userId}`);
         const data = await response.json();
 
         setStatus(data.status);
