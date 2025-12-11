@@ -231,7 +231,7 @@ VITE_API_BASE_URL=______________________________
 VITE_WALLET_BASE_URL=______________________________
 ```
 
-## 📊 Features
+## Features
 
 - ✅ Multi-currency wallet creation
 - ✅ Real-time currency conversion
