@@ -233,14 +233,14 @@ VITE_WALLET_BASE_URL=______________________________
 
 ## Features
 
-- ✅ Multi-currency wallet creation
-- ✅ Real-time currency conversion
-- ✅ Transaction history tracking
-- ✅ User authentication and authorization
-- ✅ Responsive UI design
-- ✅ RESTful API architecture
-- ✅ Microservices architecture
-- ✅ Containerized deployment
+- Multi-currency wallet creation
+- Real-time currency conversion
+- Transaction history tracking
+- User authentication and authorization
+- Responsive UI design
+- RESTful API architecture
+- Microservices architecture
+- Containerized deployment
 
 
 
