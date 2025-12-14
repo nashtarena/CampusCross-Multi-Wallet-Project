@@ -53,7 +53,7 @@ export function SignIn({ onBack }: SignInProps) {
       localStorage.setItem("authToken", response.token);
 
       const userData = {
-        id: response.userId,
+        id: String(response.userId),
         email: response.email,
         fullName: response.fullName,
         role: response.role,

@@ -11,6 +11,7 @@ import { Label } from '../ui/label';
 import { useAppContext } from '../../App';
 import { walletApi, transactionApi } from '../../services/walletApi';
 import { Wallet, Transaction } from '../../services/walletApi';
+import { getTransactionDirection, getP2PDescription } from './P2PTransfer';
 import { NotificationsPanel } from '../notifications/NotificationsPanel';
 import { Bell, Settings, Eye, EyeOff, Send, QrCode, ArrowLeftRight, AlertCircle as AlertCircleIcon, Plus, Clock, LogOut } from 'lucide-react';
 
@@ -151,23 +152,13 @@ export function Home({ onNavigate }: HomeProps) {
     return colors[currency] || '#3498DB';
   };
 
+  // Helper to determine if a P2P transaction is incoming (received) or outgoing (sent)
+  // Use helpers from P2PTransfer for P2P transactions
   const getDescription = (tx: Transaction) => {
+    if (tx.type === 'P2P_TRANSFER') {
+      return getP2PDescription(tx);
+    }
     switch (tx.type) {
-      case 'P2P_TRANSFER':
-        // Parse the description to extract recipient/sender info
-        const desc = tx.description || '';
-        if (desc.includes('to ')) {
-          // This is an outgoing transfer: "P2P transfer to X"
-          const recipient = desc.split('to ')[1];
-          return `You sent ${getCurrencySymbol(tx.currencyCode)}${tx.amount.toFixed(2)} to ${recipient}`;
-        } else if (desc.includes('from ')) {
-          // This is an incoming transfer: "P2P transfer from X"
-          const sender = desc.split('from ')[1];
-          return `${sender} sent you ${getCurrencySymbol(tx.currencyCode)}${tx.amount.toFixed(2)}`;
-        } else {
-          // Fallback for generic descriptions
-          return `P2P Transfer ${getCurrencySymbol(tx.currencyCode)}${tx.amount.toFixed(2)}`;
-        }
       case 'CAMPUS_PAYMENT':
         return `Campus Payment ${getCurrencySymbol(tx.currencyCode)}${tx.amount.toFixed(2)}`;
       case 'REMITTANCE':
@@ -179,6 +170,22 @@ export function Home({ onNavigate }: HomeProps) {
       default:
         return `${getCurrencySymbol(tx.currencyCode)}${tx.amount.toFixed(2)}`;
     }
+  };
+
+  // Use direction for color/amount sign
+  const getP2PAmountSign = (tx: Transaction) => {
+    if (tx.type !== 'P2P_TRANSFER') return '';
+    const dir = getTransactionDirection(tx);
+    if (dir === 'incoming') return '+';
+    if (dir === 'outgoing') return '-';
+    return '';
+  };
+  const getP2PColor = (tx: Transaction) => {
+    if (tx.type !== 'P2P_TRANSFER') return '';
+    const dir = getTransactionDirection(tx);
+    if (dir === 'incoming') return 'text-green-600';
+    if (dir === 'outgoing') return 'text-red-600';
+    return '';
   };
 
   const formatTransactionType = (type: string) => {
@@ -384,9 +391,27 @@ export function Home({ onNavigate }: HomeProps) {
               <div key={tx.transactionId} className="p-4 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                    isCreditTransaction(tx) ? 'bg-green-100 dark:bg-green-900' : 'bg-red-100 dark:bg-red-900'
+                    tx.type === 'P2P_TRANSFER'
+                      ? getTransactionDirection(tx) === 'incoming'
+                        ? 'bg-green-100 dark:bg-green-900'
+                        : getTransactionDirection(tx) === 'outgoing'
+                        ? 'bg-red-100 dark:bg-red-900'
+                        : 'bg-gray-200 dark:bg-gray-700'
+                      : isCreditTransaction(tx)
+                      ? 'bg-green-100 dark:bg-green-900'
+                      : 'bg-red-100 dark:bg-red-900'
                   }`}>
-                    <Clock className={isCreditTransaction(tx) ? 'text-green-600' : 'text-red-600'} size={18} />
+                    <Clock className={
+                      tx.type === 'P2P_TRANSFER'
+                        ? getTransactionDirection(tx) === 'incoming'
+                          ? 'text-green-600'
+                          : getTransactionDirection(tx) === 'outgoing'
+                          ? 'text-red-600'
+                          : 'text-gray-500'
+                        : isCreditTransaction(tx)
+                        ? 'text-green-600'
+                        : 'text-red-600'
+                    } size={18} />
                   </div>
                   <div>
                     <p className={`text-sm ${textColor}`}>{getDescription(tx)}</p>
@@ -394,8 +419,16 @@ export function Home({ onNavigate }: HomeProps) {
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className={`text-sm ${isCreditTransaction(tx) ? 'text-green-600' : 'text-red-600'}`}>
-                    {isCreditTransaction(tx) ? '+' : '-'}{getCurrencySymbol(tx.currencyCode)}{Math.abs(tx.amount).toFixed(2)}
+                  <p className={`text-sm ${
+                    tx.type === 'P2P_TRANSFER'
+                      ? getP2PColor(tx)
+                      : isCreditTransaction(tx)
+                      ? 'text-green-600'
+                      : 'text-red-600'
+                  }`}>
+                    {tx.type === 'P2P_TRANSFER'
+                      ? `${getP2PAmountSign(tx)}${getCurrencySymbol(tx.currencyCode)}${Math.abs(tx.amount).toFixed(2)}`
+                      : `${isCreditTransaction(tx) ? '+' : '-'}${getCurrencySymbol(tx.currencyCode)}${Math.abs(tx.amount).toFixed(2)}`}
                   </p>
                   <p className={`text-xs ${textSecondary}`}>{formatDate(tx.createdAt)}</p>
                 </div>

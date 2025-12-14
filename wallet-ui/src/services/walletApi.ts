@@ -65,6 +65,8 @@ export interface Transaction {
   flagged?: boolean;
   flagReason?: string;
   recipient?: string;
+  senderStudentId?: string;
+  recipientStudentId?: string;
 }
 
 export interface AuthRequest {
@@ -92,10 +94,9 @@ export interface AuthResponse {
 }
 
 export interface P2PTransferRequest {
-  fromWalletId: number;
-  toWalletAddress: string;
+  sourceWalletId: number;
+  recipientIdentifier: string;
   amount: number;
-  currency: string;
   description?: string;
 }
 

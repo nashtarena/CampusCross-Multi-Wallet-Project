@@ -85,7 +85,9 @@ public class TransactionController {
                     transaction.getDescription(),
                     transaction.getCreatedAt(),
                     transaction.getCompletedAt(),
-                    "P2P transfer initiated successfully"));
+                    "P2P transfer initiated successfully",
+                    transaction.getSenderStudentId(),
+                    transaction.getRecipientStudentId()));
 
         } catch (Exception e) {
             log.error("P2P transfer failed: {}", e.getMessage());
@@ -133,7 +135,9 @@ public class TransactionController {
                     transaction.getDescription(),
                     transaction.getCreatedAt(),
                     transaction.getCompletedAt(),
-                    "Campus payment processed successfully"));
+                    "Campus payment processed successfully",
+                    transaction.getSenderStudentId(),
+                    transaction.getRecipientStudentId()));
 
         } catch (Exception e) {
             log.error("Campus payment failed: {}", e.getMessage());
@@ -169,7 +173,9 @@ public class TransactionController {
                     transaction.getDescription(),
                     transaction.getCreatedAt(),
                     transaction.getCompletedAt(),
-                    "Remittance processed successfully"));
+                    "Remittance processed successfully",
+                    transaction.getSenderStudentId(),
+                    transaction.getRecipientStudentId()));
 
         } catch (Exception e) {
             log.error("Remittance failed: {}", e.getMessage());
@@ -325,7 +331,9 @@ public class TransactionController {
                 t.getDescription(),
                 t.getCreatedAt(),
                 t.getCompletedAt(),
-                null);
+                null,
+                t.getSenderStudentId(),
+                t.getRecipientStudentId());
     }
 
     private String getClientIpAddress(HttpServletRequest request) {
@@ -375,7 +383,9 @@ public class TransactionController {
             String description,
             LocalDateTime createdAt,
             LocalDateTime completedAt,
-            String message) {
+            String message,
+            String senderStudentId,
+            String recipientStudentId) {
     }
 
     public record PagedTransactionResponse(

@@ -1,3 +1,50 @@
+// Helper to determine the direction of a P2P transaction
+export const getTransactionDirection = (tx: Transaction) => {
+  if (tx.type !== 'P2P_TRANSFER') return 'other';
+  const userStr = localStorage.getItem('user');
+  if (!userStr) return 'other';
+  const user = JSON.parse(userStr);
+  const userId = String(user.studentId || user.id).trim().toLowerCase();
+  const senderId = String(tx.senderStudentId).trim().toLowerCase();
+  const recipientId = String(tx.recipientStudentId).trim().toLowerCase();
+  if (recipientId === userId) return 'incoming';
+  if (senderId === userId) return 'outgoing';
+  return 'other';
+};
+
+export const getCurrencySymbol = (currency: string) => {
+  const symbols: { [key: string]: string } = {
+    USD: "$",
+    EUR: "€",
+    GBP: "£",
+    JPY: "¥",
+    INR: "₹",
+  };
+  return symbols[currency] || currency;
+};
+
+export const getP2PDescription = (tx: Transaction) => {
+  const direction = getTransactionDirection(tx);
+  if (direction === 'incoming') {
+    // Incoming: X sent you ...
+    const sender = tx.senderStudentId || '';
+    return `${sender ? `${sender} sent you ` : 'You received '}${getCurrencySymbol(tx.currencyCode)}${tx.amount.toFixed(2)}`;
+  } else if (direction === 'outgoing') {
+    // Outgoing: You sent ...
+    let recipientDisplay = '';
+    if (tx.recipientStudentId) {
+      recipientDisplay = tx.recipientStudentId;
+    } else if (tx.recipient) {
+      recipientDisplay = tx.recipient;
+    } else {
+      recipientDisplay = 'Unknown';
+    }
+    return `You sent ${getCurrencySymbol(tx.currencyCode)}${tx.amount.toFixed(2)} to ${recipientDisplay}`;
+  } else {
+    // Fallback for other cases
+    return `${getCurrencySymbol(tx.currencyCode)}${tx.amount.toFixed(2)}`;
+  }
+};
 import React, { useState, useEffect } from "react";
 import { Button } from "../ui/button";
 import { Card } from "../ui/card";
@@ -107,15 +154,21 @@ export function P2PTransfer({ onBack }: P2PTransferProps) {
         const user = JSON.parse(userStr);
         const transactions = await transactionApi.getUserTransactions(user.id);
 
-        /** FIX APPLIED — use raw array directly */
         const transactionsArray = Array.isArray(transactions)
           ? transactions
           : [];
 
-        const p2pTransactions = transactionsArray.filter(
-          (tx: any) => tx.type === "P2P_TRANSFER"
-        );
-        setRecentTransactions(p2pTransactions.slice(0, 10));
+        // Only show transactions where user is sender or recipient
+        const relevantP2PTransactions = transactionsArray.filter((tx: any) => {
+          if (tx.type !== "P2P_TRANSFER") return false;
+          const userId = user.studentId || user.id;
+          return (
+            tx.senderStudentId?.toLowerCase() === userId?.toLowerCase() ||
+            tx.recipientStudentId?.toLowerCase() === userId?.toLowerCase()
+          );
+        });
+        setRecentTransactions(relevantP2PTransactions.slice(0, 10));
+        // ...existing code...
       } catch (error) {
         //console.error("Failed to fetch transactions:", error);
       } finally {
