@@ -44,7 +44,7 @@ The project consists of three main components:
 - **Language**: TypeScript
 - **Framework**: React
 - **Styling**: CSS, ShadCN
-- **Build Tool**: Vite/Webpack
+- **Build Tool**: Vite
 
 ### DevOps
 - **Containerization**: Docker
@@ -56,11 +56,11 @@ The project consists of three main components:
 CampusCross-Multi-Wallet-Project/
 ├── wallet-service/          # Wallet management microservice
 │   ├── src/
-│   ├── pom.xml/build.gradle
+│   ├── pom.xml
 │   └── Dockerfile
 ├── fx-service/              # Foreign exchange microservice
 │   ├── src/
-│   ├── pom.xml/build.gradle
+│   ├── pom.xml
 │   └── Dockerfile
 ├── wallet-ui/               # React frontend application
 │   ├── src/
