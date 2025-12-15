@@ -37,7 +37,7 @@ The project consists of three main components:
 ### Backend
 - **Language**: Java
 - **Framework**: Spring Boot
-- **Build Tool**: Maven/Gradle
+- **Build Tool**: Maven
 - **Database**: PostgreSQL(Supabase)
 
 ### Frontend
