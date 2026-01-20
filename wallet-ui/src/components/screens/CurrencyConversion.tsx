@@ -32,7 +32,6 @@ const currencies = [
     name: "US Dollar",
     symbol: "$",
     color: "#2ECC71",
-    balance: 2450.75,
   },
   { code: "EUR", name: "Euro", symbol: "€", color: "#9B59B6", balance: 1820.5 },
   {
@@ -40,21 +39,18 @@ const currencies = [
     name: "British Pound",
     symbol: "£",
     color: "#E67E22",
-    balance: 980.25,
   },
   {
     code: "JPY",
     name: "Japanese Yen",
     symbol: "¥",
     color: "#E74C3C",
-    balance: 125000,
   },
   {
     code: "INR",
     name: "Indian Rupee",
     symbol: "₹",
     color: "#F4C542",
-    balance: 45500,
   },
 ];
 
@@ -234,10 +230,6 @@ export function CurrencyConversion({ onBack }: CurrencyConversionProps) {
                 />
               </div>
             </div>
-            <p className="text-xs text-gray-500 mt-2">
-              Available: {fromCurrencyData?.symbol}
-              {fromCurrencyData?.balance.toLocaleString()}
-            </p>
           </div>
 
           {/* Swap Button */}
@@ -281,10 +273,6 @@ export function CurrencyConversion({ onBack }: CurrencyConversionProps) {
           <div className="bg-slate-50 rounded-xl p-4 mb-4">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm text-gray-600">Exchange Rate</span>
-              <div className="flex items-center gap-1">
-                <TrendingDown className="text-red-500" size={14} />
-                <span className="text-xs text-red-500">-0.3%</span>
-              </div>
             </div>
             <p className="text-gray-900">
               {loadingRate ? (
