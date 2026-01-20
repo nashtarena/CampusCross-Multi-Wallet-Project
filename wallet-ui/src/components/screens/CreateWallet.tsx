@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ArrowLeft, Plus, Wallet as WalletIcon } from "lucide-react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
@@ -25,6 +25,8 @@ export function CreateWallet({ onBack, onWalletCreated }: CreateWalletProps) {
   const [currency, setCurrency] = useState("USD");
   const [isDefault, setIsDefault] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
+  const [userWallets, setUserWallets] = useState<any[]>([]);
+  const [duplicateCurrency, setDuplicateCurrency] = useState(false);
 
   const currencies = [
     { value: "USD", label: "USD - US Dollar" },
@@ -34,9 +36,31 @@ export function CreateWallet({ onBack, onWalletCreated }: CreateWalletProps) {
     { value: "INR", label: "INR - Indian Rupee" },
   ];
 
+  useEffect(() => {
+    // Get userId from localStorage
+    const userStr = localStorage.getItem("user");
+    if (!userStr) return;
+    const user = JSON.parse(userStr);
+    const userId = user.userId || user.id || user.studentId;
+    if (!userId) return;
+    walletApi.getUserWallets(userId)
+      .then((wallets) => setUserWallets(wallets))
+      .catch(() => setUserWallets([]));
+  }, []);
+
+  useEffect(() => {
+    // Check for duplicate currency
+    const exists = userWallets.some(w => (w.currencyCode || w.currency) === currency);
+    setDuplicateCurrency(exists);
+  }, [currency, userWallets]);
+
   const handleCreateWallet = async () => {
     if (!walletName.trim()) {
       toast.error("Please enter a wallet name");
+      return;
+    }
+    if (duplicateCurrency) {
+      toast.error("You already have a wallet with this currency. Creation not possible.");
       return;
     }
 
@@ -149,21 +173,10 @@ export function CreateWallet({ onBack, onWalletCreated }: CreateWalletProps) {
             </Select>
           </div>
 
-          {/* Default Wallet Toggle */}
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label>Set as default wallet</Label>
-              <p className="text-sm text-gray-600">
-                This will be your primary wallet for transactions
-              </p>
-            </div>
-            <Switch checked={isDefault} onCheckedChange={setIsDefault} />
-          </div>
-
           {/* Create Button */}
           <Button
             onClick={handleCreateWallet}
-            disabled={isLoading || !walletName.trim()}
+            disabled={isLoading || !walletName.trim() || duplicateCurrency}
             className="w-full"
           >
             {isLoading ? (
@@ -178,6 +191,9 @@ export function CreateWallet({ onBack, onWalletCreated }: CreateWalletProps) {
               </>
             )}
           </Button>
+          {duplicateCurrency && (
+            <div className="text-red-600 text-sm mt-2">You already have a wallet with this currency. Creation is not possible.</div>
+          )}
 
           {/* Info Section */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">

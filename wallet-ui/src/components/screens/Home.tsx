@@ -430,6 +430,7 @@ export function Home({ onNavigate }: HomeProps) {
                       ? `${getP2PAmountSign(tx)}${getCurrencySymbol(tx.currencyCode)}${Math.abs(tx.amount).toFixed(2)}`
                       : `${isCreditTransaction(tx) ? '+' : '-'}${getCurrencySymbol(tx.currencyCode)}${Math.abs(tx.amount).toFixed(2)}`}
                   </p>
+                  <p className={`text-xs ${textSecondary}`}>{formatDate(tx.createdAt)}</p>
                 </div>
               </div>
             ))
